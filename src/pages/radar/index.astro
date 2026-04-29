@@ -1,25 +1,19 @@
 ---
-import { getCollection } from "astro:content";
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import Badge from "../../components/ui/Badge.astro";
 import Button from "../../components/ui/Button.astro";
 import Panel from "../../components/ui/Panel.astro";
 import SectionHeader from "../../components/ui/SectionHeader.astro";
+import {
+  formatRadarDate,
+  getPublishedRadarEntries,
+  getRadarIssuePath,
+} from "../../lib/radar";
 import { siteRoutes, withBase } from "../../lib/routes";
 
-const radarEntries = (await getCollection("radar")).sort(
-  (left, right) =>
-    right.data.published_at.getTime() - left.data.published_at.getTime(),
-);
-
+const radarEntries = await getPublishedRadarEntries();
 const latestRadar = radarEntries[0];
-const latestDate = latestRadar
-  ? latestRadar.data.published_at.toLocaleDateString("zh-CN", {
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-    })
-  : null;
+const latestDate = latestRadar ? formatRadarDate(latestRadar.data.published_at) : null;
 ---
 
 <BaseLayout
@@ -36,33 +30,47 @@ const latestDate = latestRadar
       </div>
       <div class="stack">
         <p class="eyebrow">Weekly AI Infra Radar</p>
-        <h1 class="title-display">每周 AI Infra / LLM / HPC 精选情报入口。</h1>
+        <h1 class="title-display">已发布 issue 的归档面，候选与审查流不直接暴露到前台。</h1>
         <p class="body-lg">
-          这里承接当期周报、编辑导语和后续归档方向。当前仍以人工筛选和静态内容发布为主，不做无人审核自动发布。
+          这里承接已发布期号列表、当前期号入口和 Radar 的结构化阅读方式。自动抓取最多只生成候选，真正公开的内容仍然以人工审查后的 issue 为准。
         </p>
       </div>
       <div class="action-row">
         <Button href={withBase(siteRoutes.home)} variant="secondary">返回首页</Button>
-        <Button href="#current-issue" variant="ghost">查看当前期号</Button>
+        <Button href="#published-issues" variant="ghost">查看已发布期号</Button>
       </div>
     </div>
 
     <div class="page-intro__rail">
       <Panel tone="accent" padding="lg">
         <p class="mono-label">Current surface</p>
-        <h2 class="title-2">Issue-based, editor-led, archive-ready.</h2>
+        <h2 class="title-2">Published issues only, human review required, archive-ready.</h2>
         <p class="body-sm">
-          首版重点是把 issue 级元数据、导语和主题说明结构固定下来，为后续归档、条目筛选和专题串联留出空间。
+          首版重点是把 issue 级元数据、item 级结构化字段和发布边界固定下来，为后续归档、筛选和候选流扩展留出空间。
         </p>
       </Panel>
+      <div class="stack-grid">
+        <Panel tone="subtle">
+          <div class="metric">
+            <span class="metric__value">{radarEntries.length}</span>
+            <span class="metric__label">published issues in the prototype archive</span>
+          </div>
+        </Panel>
+        <Panel tone="subtle">
+          <div class="metric">
+            <span class="metric__value">{latestRadar ? latestRadar.data.items.length : 0}</span>
+            <span class="metric__label">structured items in the latest issue</span>
+          </div>
+        </Panel>
+      </div>
     </div>
   </section>
 
   <section class="section" id="current-issue">
     <SectionHeader
-      eyebrow="Current Issue"
+      eyebrow="Latest Published Issue"
       title={latestRadar ? latestRadar.data.title : "No published issue yet"}
-      description="当前页面展示最小但真实的 Radar issue 结构。后续归档和更多条目层展示会在 Phase 4 继续推进。"
+      description="首页只拿最新的 `published` issue 做预览；Radar 主页则负责把期号归档与单期入口组织清楚。"
     />
 
     <div class="split-grid">
@@ -91,6 +99,11 @@ const latestDate = latestRadar
               : "当前尚未发布新的期号内容。"}
           </p>
         </Panel>
+        {latestRadar && (
+          <div class="action-row">
+            <Button href={getRadarIssuePath(latestRadar.slug)} variant="primary">进入当前期号</Button>
+          </div>
+        )}
       </Panel>
 
       <Panel as="article" padding="lg">
@@ -102,14 +115,47 @@ const latestDate = latestRadar
           </li>
           <li>
             <p class="mono-label">Static-first issue model</p>
-            <p class="body-sm">当前以 Markdown issue 和结构化条目为主，先保证信息密度和可维护性。</p>
+            <p class="body-sm">当前以 Markdown issue + item 数组为主，候选池单独维护，不和公开 issue 混放。</p>
           </li>
           <li>
-            <p class="mono-label">Archive comes later</p>
-            <p class="body-sm">期数归档、筛选视图和主题串联会在后续阶段继续展开。</p>
+            <p class="mono-label">Latest issue rule</p>
+            <p class="body-sm">首页和 Radar 入口统一读取最新的 `published` issue，而不是隐式依赖文件名或审核中内容。</p>
           </li>
         </ul>
       </Panel>
+    </div>
+  </section>
+
+  <section class="section" id="published-issues">
+    <SectionHeader
+      eyebrow="Published Archive"
+      title="Every published issue gets a stable detail route."
+      description="列表页承接期号归档，detail route 承接 issue 导语和 item-level 结构化条目。"
+    />
+
+    <div class="archive-grid">
+      {radarEntries.map((entry) => (
+        <Panel as="article" padding="lg" class="page-card">
+          <div class="callout-row">
+            <Badge tone="accent">{entry.data.week_label}</Badge>
+            <Badge>{formatRadarDate(entry.data.published_at)}</Badge>
+          </div>
+          <h3 class="title-3">{entry.data.title}</h3>
+          <p class="body-sm">{entry.data.summary}</p>
+          <div class="cluster">
+            {entry.data.topics.map((topic) => (
+              <Badge>{topic}</Badge>
+            ))}
+          </div>
+          <div class="callout-row issue-card__meta">
+            <span>{entry.data.editor_name}</span>
+            <span>{entry.data.items.length} items</span>
+          </div>
+          <div class="action-row">
+            <Button href={getRadarIssuePath(entry.slug)} variant="secondary">查看单期详情</Button>
+          </div>
+        </Panel>
+      ))}
     </div>
   </section>
 </BaseLayout>

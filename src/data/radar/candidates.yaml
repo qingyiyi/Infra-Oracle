@@ -1,0 +1,51 @@
+- id: candidate-2026-w19-01
+  title: 示例：推理框架补充缓存路径调优说明
+  source_name: Example Inference Project
+  source_url: https://example.com/radar/candidate/cache-tuning
+  source_type: release_notes
+  category: tooling
+  published_at: 2026-05-05
+  ingestion_method: manual
+  review_status: candidate
+  summary_draft: 一份候选 release 说明，关注批处理和缓存路径的吞吐优化。
+  why_it_matters_draft: 如果后续确认影响真实部署路径，可进入当期 Radar 的工具链更新部分。
+  credibility: high
+  review_notes: 待确认是否属于本周最值得展示的更新。
+  tags:
+    - inference
+    - tooling
+    - cache
+- id: candidate-2026-w19-02
+  title: 示例：模型平台公布新的部署规格
+  source_name: Example Model Platform
+  source_url: https://example.com/radar/candidate/deployment-spec
+  source_type: product_update
+  category: infra
+  published_at: 2026-05-04
+  ingestion_method: monitor
+  review_status: deferred
+  summary_draft: 平台更新了部署规格，但暂时缺少足够上下文判断其影响范围。
+  why_it_matters_draft: 如果后续确认影响多模型部署成本或兼容边界，可以进入下期候选。
+  credibility: medium
+  review_notes: 暂缓，等待更多原始资料或实测讨论。
+  tags:
+    - infra
+    - deployment
+    - platform
+- id: candidate-2026-w19-03
+  title: 示例：二手转载的性能结论
+  source_name: Example Aggregator
+  source_url: https://example.com/radar/candidate/secondary-summary
+  source_type: blog
+  category: paper
+  published_at: 2026-05-03
+  ingestion_method: monitor
+  review_status: rejected
+  summary_draft: 二手文章总结了一个性能结论，但没有提供原始测试或论文链接。
+  why_it_matters_draft: 线索方向可能相关，但当前不足以进入公开 issue。
+  credibility: low
+  review_notes: 退回；需要回到原始来源再重新评估。
+  tags:
+    - benchmark
+    - paper
+    - verification

@@ -1,25 +1,16 @@
 ---
-import { getCollection } from "astro:content";
 import BaseLayout from "../layouts/BaseLayout.astro";
 import Badge from "../components/ui/Badge.astro";
 import Button from "../components/ui/Button.astro";
 import Panel from "../components/ui/Panel.astro";
 import SectionHeader from "../components/ui/SectionHeader.astro";
+import { formatRadarDate, getPublishedRadarEntries, getRadarIssuePath } from "../lib/radar";
 import { siteRoutes, withBase } from "../lib/routes";
 
-const radarEntries = (await getCollection("radar")).sort(
-  (left, right) =>
-    right.data.published_at.getTime() - left.data.published_at.getTime(),
-);
-
+const radarEntries = await getPublishedRadarEntries();
 const latestRadar = radarEntries[0];
-const latestRadarDate = latestRadar
-  ? latestRadar.data.published_at.toLocaleDateString("zh-CN", {
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-    })
-  : null;
+const latestRadarDate = latestRadar ? formatRadarDate(latestRadar.data.published_at) : null;
+const latestRadarRoute = latestRadar ? getRadarIssuePath(latestRadar.slug) : withBase(siteRoutes.radar);
 
 const modulePreviewCards = [
   {
@@ -33,9 +24,9 @@ const modulePreviewCards = [
       : "先做人工筛选与静态展示，不做无人审核自动发布。",
     tags: latestRadar ? latestRadar.data.topics : ["weekly", "curated", "infra"],
     route: withBase(siteRoutes.radar),
-    action: "查看 Radar",
+    action: "查看 Radar 归档",
     tone: "accent" as const,
-    status: latestRadarDate ?? "current issue",
+    status: latestRadar ? latestRadar.data.week_label : "current issue",
   },
   {
     eyebrow: "Web Codex Runner",
@@ -106,7 +97,7 @@ const futureExperiments = [
       </div>
 
       <div class="action-row">
-        <Button href={withBase(siteRoutes.radar)} variant="primary">查看本期 Radar</Button>
+        <Button href={latestRadarRoute} variant="primary">查看本期 Radar</Button>
         <Button href={withBase(siteRoutes.runner)} variant="secondary">了解 Runner 边界</Button>
         <Button href="#future-experiments" variant="ghost">浏览未来实验入口</Button>
       </div>
@@ -152,8 +143,8 @@ const futureExperiments = [
         </Panel>
         <Panel tone="subtle">
           <div class="metric">
-            <span class="metric__value">15</span>
-            <span class="metric__label">completed milestones before the Phase 3 content pass</span>
+            <span class="metric__value">25</span>
+            <span class="metric__label">completed milestones in the current roadmap</span>
           </div>
         </Panel>
       </div>
@@ -199,10 +190,10 @@ const futureExperiments = [
 
     <div class="split-grid">
       <Panel as="article" padding="lg">
-        <div class="callout-row">
-          <Badge tone="accent">Latest Radar</Badge>
-          {latestRadarDate && <Badge>{latestRadarDate}</Badge>}
-        </div>
+          <div class="callout-row">
+            <Badge tone="accent">Latest Radar</Badge>
+            {latestRadarDate && <Badge>{latestRadarDate}</Badge>}
+          </div>
         <h3 class="title-2">{latestRadar ? latestRadar.data.title : "Weekly AI Infra Radar"}</h3>
         <p class="body-md">
           {latestRadar
@@ -218,7 +209,8 @@ const futureExperiments = [
           </p>
         </Panel>
         <div class="action-row">
-          <Button href={withBase(siteRoutes.radar)} variant="secondary">进入 Radar</Button>
+          <Button href={latestRadarRoute} variant="secondary">进入本期</Button>
+          <Button href={withBase(siteRoutes.radar)} variant="ghost">查看归档</Button>
         </div>
       </Panel>
 

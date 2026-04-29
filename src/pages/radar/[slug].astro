@@ -1,0 +1,177 @@
+---
+import type { GetStaticPaths } from "astro";
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import Badge from "../../components/ui/Badge.astro";
+import Button from "../../components/ui/Button.astro";
+import Panel from "../../components/ui/Panel.astro";
+import SectionHeader from "../../components/ui/SectionHeader.astro";
+import {
+  formatRadarDate,
+  getPublishedRadarEntries,
+  getRadarIssuePath,
+  type RadarEntry,
+} from "../../lib/radar";
+import { siteRoutes, withBase } from "../../lib/routes";
+
+export const getStaticPaths = (async () => {
+  const entries = await getPublishedRadarEntries();
+
+  return entries.map((entry) => ({
+    params: { slug: entry.slug },
+    props: { entry },
+  }));
+}) satisfies GetStaticPaths;
+
+interface Props {
+  entry: RadarEntry;
+}
+
+const { entry } = Astro.props as Props;
+const { Content } = await entry.render();
+const reviewedDate = entry.data.reviewed_at ? formatRadarDate(entry.data.reviewed_at) : null;
+---
+
+<BaseLayout
+  active="radar"
+  title={`${entry.data.title} | GitHub Page / AI Infra & Codex Lab`}
+  description={entry.data.summary}
+>
+  <section class="section page-intro">
+    <div class="hero-copy">
+      <div class="cluster">
+        <Badge tone="accent">{entry.data.week_label}</Badge>
+        <Badge tone="success">{entry.data.editorial_status}</Badge>
+        <Badge>{formatRadarDate(entry.data.published_at)}</Badge>
+      </div>
+      <div class="stack">
+        <p class="eyebrow">Weekly AI Infra Radar / Issue Detail</p>
+        <h1 class="title-display">{entry.data.title}</h1>
+        <p class="body-lg">{entry.data.summary}</p>
+      </div>
+      <div class="action-row">
+        <Button href={withBase(siteRoutes.radar)} variant="secondary">返回 Radar 列表</Button>
+        <Button href="#issue-items" variant="ghost">跳到条目列表</Button>
+      </div>
+    </div>
+
+    <div class="page-intro__rail">
+      <Panel tone="accent" padding="lg">
+        <p class="mono-label">Issue metadata</p>
+        <div class="detail-list">
+          <div>
+            <p class="mono-label">Editor</p>
+            <p class="body-sm">{entry.data.editor_name}</p>
+          </div>
+          <div>
+            <p class="mono-label">Reviewed by</p>
+            <p class="body-sm">
+              {entry.data.reviewed_by ?? "Pending"}
+              {reviewedDate && ` · ${reviewedDate}`}
+            </p>
+          </div>
+          <div>
+            <p class="mono-label">Topics</p>
+            <div class="cluster">
+              {entry.data.topics.map((topic) => (
+                <Badge>{topic}</Badge>
+              ))}
+            </div>
+          </div>
+        </div>
+      </Panel>
+    </div>
+  </section>
+
+  <section class="section">
+    <SectionHeader
+      eyebrow="Editorial Intro"
+      title={entry.data.hero_note}
+      description="单期页面同时承接 issue 级导语和 item 级结构化条目，避免首页承担过多阅读负担。"
+    />
+
+    <div class="split-grid">
+      <Panel as="article" padding="lg">
+        <div class="markdown-body">
+          <Content />
+        </div>
+      </Panel>
+
+      <Panel as="article" padding="lg">
+        <h3 class="title-3">Publishing boundary</h3>
+        <ul class="surface-list">
+          <li>
+            <p class="mono-label">Published only</p>
+            <p class="body-sm">当前 detail route 只为 `published` issue 生成，不把候选或审核中内容暴露到前台。</p>
+          </li>
+          <li>
+            <p class="mono-label">Human-reviewed</p>
+            <p class="body-sm">条目进入 issue 前必须经过来源核对、摘要压缩和“为什么重要”补全。</p>
+          </li>
+          <li>
+            <p class="mono-label">Static-first output</p>
+            <p class="body-sm">当前仍然是 Markdown + 结构化字段发布，不依赖后端编辑后台。</p>
+          </li>
+        </ul>
+      </Panel>
+    </div>
+  </section>
+
+  <section class="section" id="issue-items">
+    <SectionHeader
+      eyebrow="Radar Items"
+      title={`${entry.data.items.length} structured signals in this issue`}
+      description="每条 item 都要同时回答来源、摘要、为什么重要和可信度，便于快速扫描和后续归档。"
+    />
+
+    <div class="issue-list">
+      {entry.data.items.map((item) => (
+        <Panel as="article" padding="lg" class="issue-card">
+          <div class="callout-row">
+            <Badge tone="accent">{item.category}</Badge>
+            <Badge>{item.source_type}</Badge>
+            <Badge tone={item.credibility === "high" ? "success" : item.credibility === "medium" ? "warning" : "danger"}>
+              credibility: {item.credibility}
+            </Badge>
+          </div>
+          <div class="stack">
+            <h3 class="title-3">{item.title}</h3>
+            <div class="issue-card__meta">
+              <span>{item.source_name}</span>
+              <span>{formatRadarDate(item.published_at)}</span>
+            </div>
+            <p class="body-md">{item.summary}</p>
+          </div>
+          <Panel tone="subtle">
+            <p class="mono-label">Why it matters</p>
+            <p class="body-sm">{item.why_it_matters}</p>
+          </Panel>
+          <div class="cluster">
+            {item.tags.map((tag) => (
+              <Badge>{tag}</Badge>
+            ))}
+          </div>
+          <div class="callout-row">
+            <a
+              href={item.source_url}
+              target="_blank"
+              rel="noreferrer"
+              class="body-sm source-link"
+            >
+              查看来源
+            </a>
+            <span class="caption">review: {item.review_status}</span>
+            <span class="caption">importance: {item.importance}</span>
+          </div>
+          {item.review_notes && (
+            <p class="caption">Review note: {item.review_notes}</p>
+          )}
+        </Panel>
+      ))}
+    </div>
+
+    <div class="action-row">
+      <Button href={getRadarIssuePath(entry.slug)} variant="ghost">当前期号链接</Button>
+      <Button href={withBase(siteRoutes.radar)} variant="secondary">查看全部期号</Button>
+    </div>
+  </section>
+</BaseLayout>
