@@ -1,0 +1,42 @@
+---
+import Badge from "./Badge.astro";
+import Panel from "./Panel.astro";
+
+interface Props {
+  eyebrow?: string;
+  title: string;
+  description: string;
+  tone?: "default" | "accent" | "subtle";
+  badge?: string;
+  badgeTone?: "default" | "accent" | "success" | "warning" | "danger";
+  class?: string;
+}
+
+const {
+  eyebrow,
+  title,
+  description,
+  tone = "default",
+  badge,
+  badgeTone = "default",
+  class: className = "",
+} = Astro.props as Props;
+
+const panelClass = ["bento-item", className].filter(Boolean).join(" ");
+---
+
+<Panel as="article" tone={tone} class={panelClass}>
+  <div class="bento-item__body">
+    <div class="callout-row">
+      {eyebrow && <p class="mono-label">{eyebrow}</p>}
+      {badge && <Badge tone={badgeTone}>{badge}</Badge>}
+    </div>
+    <h3 class="title-3">{title}</h3>
+    <p class="body-sm">{description}</p>
+  </div>
+  {Astro.slots.has("footer") && (
+    <div class="bento-item__footer">
+      <slot name="footer" />
+    </div>
+  )}
+</Panel>

@@ -1,0 +1,54 @@
+:where(.button, .panel, .nav-link, .field__control, .badge) {
+  transition:
+    transform var(--duration-base) var(--easing-standard),
+    background-color var(--duration-base) var(--easing-standard),
+    border-color var(--duration-base) var(--easing-standard),
+    box-shadow var(--duration-base) var(--easing-standard),
+    color var(--duration-base) var(--easing-standard);
+}
+
+:where(.nav-link:hover, .nav-link:focus-visible) {
+  color: var(--color-text);
+  border-color: rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+:where(.button--primary:hover, .button--primary:focus-visible) {
+  transform: translateY(-2px);
+  box-shadow: 0 16px 36px rgba(94, 106, 210, 0.3);
+}
+
+:where(.button--secondary:hover, .button--ghost:hover) {
+  transform: translateY(-2px);
+  border-color: var(--color-border-strong);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+:where(.panel:hover) {
+  transform: translateY(-4px);
+  border-color: var(--color-border-strong);
+  box-shadow: var(--shadow-panel-hover);
+}
+
+:where(.field__control:hover) {
+  border-color: var(--color-border-strong);
+}
+
+:where(.button:focus-visible, .nav-link:focus-visible, .field__control:focus-visible) {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  :where(.button, .panel, .nav-link, .field__control, .badge) {
+    transition: none;
+  }
+
+  :where(.button:hover, .panel:hover, .nav-link:hover) {
+    transform: none;
+  }
+}

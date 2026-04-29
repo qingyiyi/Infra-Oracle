@@ -1,0 +1,15 @@
+- id: fortune-001
+  tier: 吉
+  weight: 30
+  headline: 今天适合稳定推进
+  summary: 适合做确定性高、回报清晰的工作。
+  do:
+    - 整理 README
+    - 跑 benchmark
+  dont:
+    - 周五深夜重构核心接口
+    - 把 API Key 放前端
+  tags:
+    - coding
+    - infra
+  disclaimer: 仅供娱乐，不作为真实决策依据。

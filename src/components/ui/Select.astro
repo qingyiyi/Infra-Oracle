@@ -1,0 +1,36 @@
+---
+interface Option {
+  label: string;
+  value: string;
+}
+
+interface Props {
+  id: string;
+  label: string;
+  name?: string;
+  hint?: string;
+  options: Option[];
+  value?: string;
+}
+
+const {
+  id,
+  label,
+  name = id,
+  hint,
+  options,
+  value,
+} = Astro.props as Props;
+---
+
+<div class="field">
+  <label class="field__label" for={id}>{label}</label>
+  <select class="field__control" id={id} name={name}>
+    {options.map((option) => (
+      <option value={option.value} selected={value === option.value}>
+        {option.label}
+      </option>
+    ))}
+  </select>
+  {hint && <p class="field__hint">{hint}</p>}
+</div>

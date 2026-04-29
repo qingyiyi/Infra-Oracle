@@ -1,0 +1,73 @@
+---
+import "../styles/tokens.css";
+import "../styles/global.css";
+import "../styles/motion.css";
+import { siteRoutes, withBase, type SiteRouteKey } from "../lib/routes";
+
+interface Props {
+  title?: string;
+  description?: string;
+  active?: SiteRouteKey;
+}
+
+const {
+  title = "GitHub Page / AI Infra & Codex Lab",
+  description = "Static-first Astro site planning and prototype shell for AI Infra, LLM, HPC, Codex, and agent workflow content.",
+  active = "home",
+} = Astro.props as Props;
+
+const navItems = [
+  { key: "home", href: withBase(siteRoutes.home), label: "首页" },
+  { key: "radar", href: withBase(siteRoutes.radar), label: "Radar" },
+  { key: "runner", href: withBase(siteRoutes.runner), label: "Runner" },
+  { key: "fortune", href: withBase(siteRoutes.fortune), label: "Fortune" },
+];
+---
+
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="site-header">
+        <div class="app-container site-header__inner">
+          <a class="brand" href={withBase(siteRoutes.home)}>
+            <span class="brand__mark" aria-hidden="true"></span>
+            <span>
+              <span class="brand__title">GitHub Page / AI Infra & Codex Lab</span>
+              <span class="brand__subtitle">Static-first interface for signals, templates, and lab surfaces</span>
+            </span>
+          </a>
+          <nav class="site-nav" aria-label="Primary">
+            <ul class="nav-list">
+              {navItems.map((item) => (
+                <li>
+                  <a
+                    class:list={["nav-link", item.key === active && "nav-link--active"]}
+                    href={item.href}
+                    aria-current={item.key === active ? "page" : undefined}
+                  >
+                    {item.label}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </nav>
+        </div>
+      </header>
+      <main class="app-container page-main">
+        <slot />
+      </main>
+      <footer class="site-footer">
+        <div class="app-container site-footer__inner">
+          Human-reviewed radar, guarded runner prototypes, and entertainment-only fortune surfaces on a shared Astro shell.
+        </div>
+      </footer>
+    </div>
+  </body>
+</html>

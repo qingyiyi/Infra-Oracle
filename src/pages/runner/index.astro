@@ -1,0 +1,111 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import Badge from "../../components/ui/Badge.astro";
+import Button from "../../components/ui/Button.astro";
+import Input from "../../components/ui/Input.astro";
+import Panel from "../../components/ui/Panel.astro";
+import SectionHeader from "../../components/ui/SectionHeader.astro";
+import Select from "../../components/ui/Select.astro";
+import Textarea from "../../components/ui/Textarea.astro";
+import { siteRoutes, withBase } from "../../lib/routes";
+
+const modelOptions = [
+  { label: "gpt-5.4", value: "gpt-5.4" },
+  { label: "gpt-5.5", value: "gpt-5.5" },
+  { label: "gpt-image-2", value: "gpt-image-2" },
+];
+---
+
+<BaseLayout
+  active="runner"
+  title="Runner | GitHub Page / AI Infra & Codex Lab"
+  description="Web Codex Runner 的当前原型边界、模板壳和后续服务端方向。"
+>
+  <section class="section page-intro">
+    <div class="hero-copy">
+      <div class="cluster">
+        <Badge tone="accent">Runner</Badge>
+        <Badge tone="warning">prototype</Badge>
+        <Badge>server-side later</Badge>
+      </div>
+      <div class="stack">
+        <p class="eyebrow">Web Codex Runner</p>
+        <h1 class="title-display">先把任务入口和边界讲清楚，再谈真实执行链路。</h1>
+        <p class="body-lg">
+          Runner v1 当前是 prompt / template / prototype 形态。它负责解释任务表面、模型选择和安全边界，
+          但不会把未来的服务端执行能力写成“现在已经能用”的功能。
+        </p>
+      </div>
+      <div class="action-row">
+        <Button href={withBase(siteRoutes.home)} variant="secondary">返回首页</Button>
+        <Button href="#prototype-surface" variant="ghost">查看当前原型</Button>
+      </div>
+    </div>
+
+    <div class="page-intro__rail">
+      <Panel tone="accent" padding="lg">
+        <p class="mono-label">Safety boundary</p>
+        <h2 class="title-2">No browser-side credentials, no fake remote execution.</h2>
+        <p class="body-sm">
+          真正的执行链路需要服务端鉴权、限流、日志和沙箱约束。当前页面只展示将来接口会长成什么样，而不是提前伪造状态机。
+        </p>
+      </Panel>
+    </div>
+  </section>
+
+  <section class="section" id="prototype-surface">
+    <SectionHeader
+      eyebrow="Prototype Surface"
+      title="A presentable task shell, not a misleading console."
+      description="当前原型重点是任务输入、模型选择、模板语气和边界说明。"
+    />
+
+    <div class="split-grid">
+      <Panel as="article" padding="lg">
+        <div class="form-grid">
+          <Input
+            id="runner-task-title"
+            label="Task title"
+            placeholder="例如：总结本周推理系统更新"
+            hint="短标题用于任务列表、报告标题或模板标识。"
+          />
+          <Select
+            id="runner-model"
+            label="Model target"
+            options={modelOptions}
+            value="gpt-5.5"
+            hint="当前只是原型壳，不代表后端已经接通。"
+          />
+        </div>
+        <Textarea
+          id="runner-brief"
+          label="Execution brief"
+          value="请以人工审查友好的方式整理变化点，保留风险边界、可信度和后续阅读入口。"
+          hint="首版更适合任务模板、prompt generator 和 prototype surface。"
+        />
+        <div class="action-row">
+          <Button variant="primary">Queue template</Button>
+          <Button variant="ghost">Read the safety boundary</Button>
+        </div>
+      </Panel>
+
+      <Panel as="article" padding="lg">
+        <h3 class="title-3">What this page means right now</h3>
+        <ul class="surface-list">
+          <li>
+            <p class="mono-label">Now</p>
+            <p class="body-sm">任务模板、输入范式、模型入口和风险边界说明。</p>
+          </li>
+          <li>
+            <p class="mono-label">Not yet</p>
+            <p class="body-sm">附件上传、鉴权、队列状态、执行日志、远程运行结果。</p>
+          </li>
+          <li>
+            <p class="mono-label">Later</p>
+            <p class="body-sm">在服务端能力成熟后，再补任务提交、执行跟踪和结果页面。</p>
+          </li>
+        </ul>
+      </Panel>
+    </div>
+  </section>
+</BaseLayout>

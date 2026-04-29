@@ -1,0 +1,15 @@
+---
+interface Props {
+  tone?: "default" | "accent" | "success" | "warning" | "danger";
+  class?: string;
+}
+
+const {
+  tone = "default",
+  class: className = "",
+} = Astro.props as Props;
+---
+
+<span class:list={["badge", `badge--${tone}`, className]}>
+  <slot />
+</span>

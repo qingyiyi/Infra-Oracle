@@ -1,0 +1,33 @@
+---
+interface Props {
+  id: string;
+  label: string;
+  name?: string;
+  placeholder?: string;
+  hint?: string;
+  rows?: number;
+  value?: string;
+}
+
+const {
+  id,
+  label,
+  name = id,
+  placeholder,
+  hint,
+  rows = 6,
+  value,
+} = Astro.props as Props;
+---
+
+<div class="field">
+  <label class="field__label" for={id}>{label}</label>
+  <textarea
+    class="field__control"
+    id={id}
+    name={name}
+    placeholder={placeholder}
+    rows={rows}
+  >{value}</textarea>
+  {hint && <p class="field__hint">{hint}</p>}
+</div>

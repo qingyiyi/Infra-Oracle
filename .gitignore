@@ -1,0 +1,23 @@
+# Default-deny public repo policy: ignore everything first.
+*
+
+# Keep this file tracked.
+!.gitignore
+
+# Public repo root files.
+!README.md
+!astro.config.mjs
+!package.json
+!package-lock.json
+!tsconfig.json
+
+# Frontend source.
+!src/
+!src/**
+!public/
+!public/**
+
+# GitHub Pages workflow only.
+!.github/
+!.github/workflows/
+!.github/workflows/deploy.yml
