@@ -15,11 +15,11 @@
   home_order: 2
   surface: both
   status: mvp
-  summary: Web Codex Runner 的 prompt/template 原型入口。
+  summary: 面向普通协作者的对话式文档工作助手原型。
   tags:
     - codex
-    - workflow
-    - prototype
+    - documents
+    - assistant
 - key: fortune
   nav_label: Fortune
   route: /fortune

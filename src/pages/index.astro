@@ -30,12 +30,12 @@ const modulePreviewCards = [
   },
   {
     eyebrow: "Web Codex Runner",
-    title: "Prompt / template / prototype shell",
+    title: "Conversation-first document workbench",
     summary:
-      "先把任务输入、模型选择、边界说明和模板入口做成网页壳，再决定后续服务端执行能力如何接入。",
+      "面向少量普通协作者的文字工作助手原型，先展示对话、任务提示、文件输入、输出下载和后端边界。",
     note:
-      "当前不是远程执行平台，不在浏览器暴露凭证，也不暗示已经连上真实运行链路。",
-    tags: ["gpt-5.4", "gpt-5.5", "gpt-image-2"],
+      "当前不是已接通的远程执行平台；真实上传、搜索、Word 生成和额度统计都必须走独立 HTTPS 后端。",
+    tags: ["documents", "search", "docx"],
     route: withBase(siteRoutes.runner),
     action: "查看 Runner",
     tone: "default" as const,
@@ -220,17 +220,17 @@ const futureExperiments = [
           <Badge>prototype only</Badge>
         </div>
         <h3 class="title-2">A task surface without fake execution promises.</h3>
-        <p class="body-sm">
-          Runner 当前只负责解释任务模板、模型选择和安全边界，不把后续服务端能力写成已经实现的网页功能。
-        </p>
+          <p class="body-sm">
+          Runner 当前展示对话式任务、文件与输出边界，不把后续服务端能力写成已经实现的网页功能。
+          </p>
         <ul class="surface-list">
           <li>
             <p class="mono-label">Now</p>
-            <p class="body-sm">任务模板、输入范式、模型入口和风险边界说明。</p>
+            <p class="body-sm">任务提示、对话原型、上传边界、输出格式和风险边界说明。</p>
           </li>
           <li>
             <p class="mono-label">Later</p>
-            <p class="body-sm">鉴权、日志、限流、附件上传和服务端执行链路。</p>
+            <p class="body-sm">共享口令、SSE 状态、文件解析、联网搜索、Word 生成和服务端执行链路。</p>
           </li>
         </ul>
         <div class="action-row">

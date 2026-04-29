@@ -1,111 +1,192 @@
 ---
 import BaseLayout from "../../layouts/BaseLayout.astro";
-import Badge from "../../components/ui/Badge.astro";
-import Button from "../../components/ui/Button.astro";
-import Input from "../../components/ui/Input.astro";
-import Panel from "../../components/ui/Panel.astro";
-import SectionHeader from "../../components/ui/SectionHeader.astro";
-import Select from "../../components/ui/Select.astro";
-import Textarea from "../../components/ui/Textarea.astro";
-import { siteRoutes, withBase } from "../../lib/routes";
 
-const modelOptions = [
-  { label: "gpt-5.4", value: "gpt-5.4" },
-  { label: "gpt-5.5", value: "gpt-5.5" },
-  { label: "gpt-image-2", value: "gpt-image-2" },
+const quickPrompts = [
+  "总结文档",
+  "改写润色",
+  "提取信息",
+  "生成 Word",
+  "联网检索调研整理资料",
+];
+
+const toolItems = [
+  {
+    title: "上传资料",
+    detail: "PDF、DOCX、PPTX、PNG、JPG；后端只解析内容，不执行文件。",
+  },
+  {
+    title: "输出格式",
+    detail: "对话框、Markdown、Word，Word 文件由后端生成下载链接。",
+  },
+  {
+    title: "导出 compact",
+    detail: "生成脱敏摘要，移除本机路径、IP、job id、token 和内部地址。",
+  },
+];
+
+const helpItems = [
+  {
+    title: "默认联网",
+    detail: "普通任务默认检索资料并附来源；只看上传文件时，请在消息里写明“不要联网，只看上传资料”。",
+  },
+  {
+    title: "来源依据",
+    detail: "优先英文论文、学校、官方机构和项目文档，中文材料作为补充。",
+  },
+  {
+    title: "文件安全",
+    detail: "上传内容只作为资料解析，不作为代码执行；真实校验和隔离由后端完成。",
+  },
+  {
+    title: "Word 输出",
+    detail: "没有自定义模板时使用默认论文风格模板；生成文件保存在后端任务目录，不进入 GitHub。",
+  },
+  {
+    title: "额度提醒",
+    detail: "前端只显示保守额度；额度不足时提示联系维护者，不暴露真实订阅凭证。",
+  },
+];
+
+const messages = [
+  {
+    role: "assistant",
+    label: "Infra Oracle Assistant",
+    body: "可以直接描述你要处理的资料和输出形式。我会先整理任务，再默认联网检索并保留来源依据。",
+  },
+  {
+    role: "user",
+    label: "你",
+    body: "请根据我上传的论文和公开资料，整理一份中文报告，并在最后生成 Word。",
+  },
+  {
+    role: "assistant",
+    label: "Infra Oracle Assistant",
+    body: "我会按四步处理：读取资料、检索英文/学术来源、整理引用依据、输出 Markdown 并准备 DOCX 下载。",
+    sources: ["Google Scholar / paper", "official docs", "中文资料补充"],
+  },
 ];
 ---
 
 <BaseLayout
   active="runner"
-  title="Runner | GitHub Page / AI Infra & Codex Lab"
-  description="Web Codex Runner 的当前原型边界、模板壳和后续服务端方向。"
+  title="Infra Oracle Assistant | GitHub Page / AI Infra & Codex Lab"
+  description="面向普通协作者的 Infra Oracle Assistant 静态原型，展示 GPT 风格对话、任务提示、共享口令和 Help 入口。"
 >
-  <section class="section page-intro">
-    <div class="hero-copy">
-      <div class="cluster">
-        <Badge tone="accent">Runner</Badge>
-        <Badge tone="warning">prototype</Badge>
-        <Badge>server-side later</Badge>
+  <section class="assistant-page" aria-labelledby="assistant-title">
+    <div class="assistant-topbar">
+      <div class="assistant-titleblock">
+        <p class="mono-label">Collaborator workspace</p>
+        <h1 id="assistant-title">Infra Oracle Assistant</h1>
       </div>
-      <div class="stack">
-        <p class="eyebrow">Web Codex Runner</p>
-        <h1 class="title-display">先把任务入口和边界讲清楚，再谈真实执行链路。</h1>
-        <p class="body-lg">
-          Runner v1 当前是 prompt / template / prototype 形态。它负责解释任务表面、模型选择和安全边界，
-          但不会把未来的服务端执行能力写成“现在已经能用”的功能。
-        </p>
-      </div>
-      <div class="action-row">
-        <Button href={withBase(siteRoutes.home)} variant="secondary">返回首页</Button>
-        <Button href="#prototype-surface" variant="ghost">查看当前原型</Button>
+
+      <div class="assistant-topbar__right">
+        <span class="assistant-pill">gpt-5.5</span>
+        <span class="assistant-pill assistant-pill--warning">余额预警</span>
+        <details class="assistant-help">
+          <summary>Help</summary>
+          <div class="assistant-popover assistant-popover--right">
+            <h2>使用说明</h2>
+            <ul>
+              {helpItems.map((item) => (
+                <li>
+                  <strong>{item.title}</strong>
+                  <span>{item.detail}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </details>
       </div>
     </div>
 
-    <div class="page-intro__rail">
-      <Panel tone="accent" padding="lg">
-        <p class="mono-label">Safety boundary</p>
-        <h2 class="title-2">No browser-side credentials, no fake remote execution.</h2>
-        <p class="body-sm">
-          真正的执行链路需要服务端鉴权、限流、日志和沙箱约束。当前页面只展示将来接口会长成什么样，而不是提前伪造状态机。
-        </p>
-      </Panel>
-    </div>
-  </section>
-
-  <section class="section" id="prototype-surface">
-    <SectionHeader
-      eyebrow="Prototype Surface"
-      title="A presentable task shell, not a misleading console."
-      description="当前原型重点是任务输入、模型选择、模板语气和边界说明。"
-    />
-
-    <div class="split-grid">
-      <Panel as="article" padding="lg">
-        <div class="form-grid">
-          <Input
-            id="runner-task-title"
-            label="Task title"
-            placeholder="例如：总结本周推理系统更新"
-            hint="短标题用于任务列表、报告标题或模板标识。"
+    <div class="assistant-shell">
+      <div class="assistant-access-modal" role="dialog" aria-labelledby="runner-access-title">
+        <p class="mono-label">Shared access</p>
+        <h2 id="runner-access-title">输入共享访问口令</h2>
+        <div class="assistant-access-form">
+          <label for="runner-shared-secret">共享访问口令</label>
+          <input
+            id="runner-shared-secret"
+            type="password"
+            autocomplete="off"
+            inputmode="text"
+            placeholder="由维护者提供"
           />
-          <Select
-            id="runner-model"
-            label="Model target"
-            options={modelOptions}
-            value="gpt-5.5"
-            hint="当前只是原型壳，不代表后端已经接通。"
-          />
+          <button type="button">进入</button>
         </div>
-        <Textarea
-          id="runner-brief"
-          label="Execution brief"
-          value="请以人工审查友好的方式整理变化点，保留风险边界、可信度和后续阅读入口。"
-          hint="首版更适合任务模板、prompt generator 和 prototype surface。"
-        />
-        <div class="action-row">
-          <Button variant="primary">Queue template</Button>
-          <Button variant="ghost">Read the safety boundary</Button>
-        </div>
-      </Panel>
+        <p>真实口令只发往后端校验，不能写进前端源码或 GitHub 仓库。</p>
+      </div>
 
-      <Panel as="article" padding="lg">
-        <h3 class="title-3">What this page means right now</h3>
-        <ul class="surface-list">
-          <li>
-            <p class="mono-label">Now</p>
-            <p class="body-sm">任务模板、输入范式、模型入口和风险边界说明。</p>
-          </li>
-          <li>
-            <p class="mono-label">Not yet</p>
-            <p class="body-sm">附件上传、鉴权、队列状态、执行日志、远程运行结果。</p>
-          </li>
-          <li>
-            <p class="mono-label">Later</p>
-            <p class="body-sm">在服务端能力成熟后，再补任务提交、执行跟踪和结果页面。</p>
-          </li>
-        </ul>
-      </Panel>
+      <div class="assistant-balance-toast" role="status">
+        当前可用额度较低，请联系维护者继续使用
+      </div>
+
+      <div class="assistant-chat" aria-label="登录后的对话界面预览">
+        <div class="assistant-message-list">
+          {messages.map((message) => (
+            <article class:list={["assistant-message", `assistant-message--${message.role}`]}>
+              <p class="assistant-message__role">{message.label}</p>
+              <p>{message.body}</p>
+              {message.sources && (
+                <div class="assistant-source-row" aria-label="来源类型">
+                  {message.sources.map((source) => (
+                    <span>{source}</span>
+                  ))}
+                </div>
+              )}
+            </article>
+          ))}
+        </div>
+
+        <div class="assistant-composer" aria-label="任务输入区">
+          <div class="assistant-quick-row" aria-label="常用任务提示">
+            {quickPrompts.map((prompt) => (
+              <button type="button" class="assistant-chip">{prompt}</button>
+            ))}
+          </div>
+
+          <div class="assistant-input-row">
+            <details class="assistant-menu">
+              <summary aria-label="打开工具菜单">+</summary>
+              <div class="assistant-popover assistant-popover--left assistant-popover--up">
+                <h2>工具</h2>
+                <ul>
+                  {toolItems.map((item) => (
+                    <li>
+                      <strong>{item.title}</strong>
+                      <span>{item.detail}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </details>
+
+            <label for="runner-message" class="assistant-hidden-label">任务说明</label>
+            <textarea
+              id="runner-message"
+              rows="2"
+              placeholder="描述你要处理的文字任务。默认联网检索并附来源；只看上传资料请直接说明。"
+            ></textarea>
+
+            <details class="assistant-help assistant-help--compact">
+              <summary aria-label="打开输入帮助">?</summary>
+              <div class="assistant-popover assistant-popover--right assistant-popover--up">
+                <h2>提示</h2>
+                <ul>
+                  {helpItems.slice(0, 3).map((item) => (
+                    <li>
+                      <strong>{item.title}</strong>
+                      <span>{item.detail}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </details>
+
+            <button type="button" class="assistant-send" aria-label="发送消息">↑</button>
+          </div>
+        </div>
+      </div>
     </div>
   </section>
 </BaseLayout>

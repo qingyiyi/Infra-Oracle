@@ -15,7 +15,7 @@ Infra-Oracle 是一个基于 Astro 的 static-first 技术展示站，面向 AI 
 - `/`：首页，包含站点定位、模块预览和 Future Experiments 入口
 - `/radar/`：`Weekly AI Infra Radar` 最新一期与归档页
 - `/radar/<issue-slug>/`：单期 Radar 详情页，例如 `weekly-ai-infra-radar-2026-w18`
-- `/runner/`：`Web Codex Runner` 前端原型页壳
+- `/runner/`：`Web Codex Runner` 对话式任务原型页
 - `/fortune/`：`Cyber Fortune` 轻量展示页壳
 
 ## 核心模块
@@ -40,13 +40,14 @@ Infra-Oracle 是一个基于 Astro 的 static-first 技术展示站，面向 AI 
 
 ### 2. Web Codex Runner
 
-一个网页端任务入口与后续服务端执行能力的产品预演。
+一个面向少量普通协作者的网页端文字工作助手原型，当前展示对话式任务、文件上传、联网检索、Markdown / Word 输出和后端安全边界。
 
 当前边界：
 
 - 当前版本是前端原型，不代表真实远程执行链路已接通
 - 不在前端暴露 OpenAI 或 Codex 凭证
-- 未来如接入真实执行能力，需要补齐鉴权、限流、日志、审计和沙箱约束
+- 未来如接入真实执行能力，需要独立 HTTPS 后端、共享访问口令、限流、日志、审计、额度统计和隔离工作区
+- 上传文件、生成文件、任务日志和 Word 输出不进入 GitHub 仓库
 
 ### 3. Cyber Fortune
 
