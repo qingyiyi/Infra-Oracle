@@ -1,7 +1,7 @@
 ---
-import "../styles/tokens.css";
-import "../styles/global.css";
-import "../styles/motion.css";
+import tokensCss from "../styles/tokens.css?raw";
+import globalCss from "../styles/global.css?raw";
+import motionCss from "../styles/motion.css?raw";
 import { siteRoutes, withBase, type SiteRouteKey } from "../lib/routes";
 
 interface Props {
@@ -15,6 +15,8 @@ const {
   description = "Static-first Astro site planning and prototype shell for AI Infra, LLM, HPC, Codex, and agent workflow content.",
   active = "home",
 } = Astro.props as Props;
+
+const inlineStyles = [tokensCss, globalCss, motionCss].join("\n");
 
 const navItems = [
   { key: "home", href: withBase(siteRoutes.home), label: "首页" },
@@ -31,6 +33,7 @@ const navItems = [
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>{title}</title>
     <meta name="description" content={description} />
+    <style is:global set:html={inlineStyles}></style>
   </head>
   <body>
     <div class="app-shell">

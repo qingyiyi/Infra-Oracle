@@ -15,7 +15,7 @@ export default defineConfig(({ command }) => {
     process.env.PUBLIC_GITHUB_PAGES_KIND === "user" ||
     (githubOwner !== null && repoName === `${githubOwner}.github.io`);
   const base =
-    command === "dev" || usesCustomDomain || isUserSite ? "/" : `/${repoName}`;
+    command === "dev" || usesCustomDomain || isUserSite ? "/" : `/${repoName}/`;
 
   return {
     site,
