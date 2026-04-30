@@ -202,11 +202,15 @@ const helpItems = [
     const cleanupButton = document.querySelector("#runner-cleanup");
     const toastEl = document.querySelector("#runner-toast");
     const quickPromptButtons = document.querySelectorAll("[data-runner-prompt]");
+    const HEARTBEAT_INTERVAL_MS = 15000;
+    const HEARTBEAT_FAILURE_LIMIT = 4;
 
     const state = {
       token: sessionStorage.getItem("runnerSessionToken") || "",
       jobId: sessionStorage.getItem("runnerJobId") || "",
       heartbeatTimer: 0,
+      heartbeatFailures: 0,
+      heartbeatWarningShown: false,
       lastMessage: "",
       busy: false,
       authenticated: false,
@@ -280,6 +284,7 @@ const helpItems = [
         stagePanel: null,
         stageCurrent: null,
         stageList: null,
+        traceRows: [],
         actionBar: null,
         copyButton: null,
         downloadButton: null,
@@ -389,50 +394,164 @@ const helpItems = [
 
     function addThinkingPanel(message) {
       const panel = document.createElement("div");
-      panel.className = "assistant-thinking";
+      panel.className = "assistant-thinking assistant-trace";
+      const header = document.createElement("div");
+      header.className = "assistant-trace__header";
+      const heading = document.createElement("strong");
+      heading.textContent = "运行 trace";
+      const stateLabel = document.createElement("span");
+      stateLabel.textContent = "准备任务";
       const current = document.createElement("div");
-      current.className = "assistant-thinking__current";
+      current.className = "assistant-thinking__current assistant-trace__current";
       current.innerHTML = `<span>准备任务</span><i></i>`;
       const list = document.createElement("ul");
-      list.className = "assistant-thinking__list";
-      panel.append(current, list);
+      list.className = "assistant-thinking__list assistant-trace__list";
+      header.append(heading, stateLabel);
+      panel.append(header, current, list);
       message.article.insertBefore(panel, message.body);
       message.stagePanel = panel;
       message.stageCurrent = current;
       message.stageList = list;
     }
 
-    function updateThinking(message, data) {
-      if (!message.stagePanel) return;
+    function normalizeTrace(data = {}) {
       const label = data.label || data.stage || "处理中";
-      const detail = data.detail || "";
-      message.stagePanel.hidden = false;
+      const detail = data.detail || data.raw || "";
+      return {
+        createdAt: data.createdAt || new Date().toISOString(),
+        kind: data.kind || "lifecycle",
+        status: data.status || "info",
+        stage: data.stage || "",
+        label,
+        detail,
+        itemType: data.itemType || "",
+        safeCommand: data.safeCommand || "",
+        domain: data.domain || "",
+        url: data.url || "",
+        title: data.title || "",
+        raw: data.raw || "",
+        exitCode: data.exitCode,
+      };
+    }
+
+    function traceStatusText(status) {
+      const map = {
+        started: "running",
+        running: "running",
+        completed: "completed",
+        failed: "failed",
+        retrying: "retrying",
+        info: "info",
+      };
+      return map[status] || "info";
+    }
+
+    function traceKindText(kind) {
+      const map = {
+        lifecycle: "life",
+        tool: "tool",
+        web: "web",
+        assistant_note: "note",
+        final_answer: "final",
+        artifact: "file",
+        error: "error",
+      };
+      return map[kind] || "trace";
+    }
+
+    function traceTime(value) {
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return "";
+      return date.toLocaleTimeString("zh-CN", { hour12: false, hour: "2-digit", minute: "2-digit", second: "2-digit" });
+    }
+
+    function updateTraceCurrent(message, trace) {
       message.stageCurrent.innerHTML = "";
       const title = document.createElement("span");
-      title.textContent = label;
-      const dots = document.createElement("i");
-      message.stageCurrent.append(title, dots);
+      title.textContent = trace.label;
+      const status = document.createElement("em");
+      status.textContent = traceStatusText(trace.status);
+      message.stageCurrent.append(title, status);
+      if (trace.status === "started" || trace.status === "running" || trace.status === "retrying") {
+        const dots = document.createElement("i");
+        message.stageCurrent.append(dots);
+      }
+    }
+
+    function appendTraceRow(message, traceInput) {
+      if (!message.stagePanel) return;
+      const trace = normalizeTrace(traceInput);
+      message.traceRows.push(trace);
+      message.stagePanel.hidden = false;
+      message.stagePanel.classList.remove("assistant-thinking--collapsed");
+      updateTraceCurrent(message, trace);
 
       const item = document.createElement("li");
-      const itemTitle = document.createElement("strong");
-      itemTitle.textContent = label;
-      item.append(itemTitle);
-      if (detail) {
-        const itemDetail = document.createElement("span");
-        itemDetail.textContent = detail;
-        item.append(itemDetail);
+      item.className = `assistant-trace-row assistant-trace-row--${traceStatusText(trace.status)}`;
+      const meta = document.createElement("div");
+      meta.className = "assistant-trace-row__meta";
+      const time = document.createElement("span");
+      time.textContent = traceTime(trace.createdAt);
+      const kind = document.createElement("span");
+      kind.textContent = traceKindText(trace.kind);
+      const status = document.createElement("span");
+      status.textContent = traceStatusText(trace.status);
+      meta.append(time, kind, status);
+
+      const main = document.createElement("div");
+      main.className = "assistant-trace-row__main";
+      const title = document.createElement("strong");
+      title.textContent = trace.label;
+      const detail = document.createElement("p");
+      detail.textContent = trace.detail || trace.title || trace.safeCommand || trace.domain || "";
+      main.append(title);
+      if (detail.textContent) main.append(detail);
+
+      const hints = document.createElement("div");
+      hints.className = "assistant-trace-row__hints";
+      [
+        trace.domain,
+        trace.title,
+        trace.url,
+        trace.safeCommand,
+        trace.exitCode !== undefined && trace.exitCode !== null ? `exit ${trace.exitCode}` : "",
+      ].filter(Boolean).forEach((value) => {
+        const chip = document.createElement("span");
+        chip.textContent = value;
+        hints.append(chip);
+      });
+      if (hints.children.length) main.append(hints);
+
+      const rawDetail = trace.raw || trace.safeCommand;
+      if (rawDetail) {
+        const details = document.createElement("details");
+        details.className = "assistant-trace-row__raw";
+        const summary = document.createElement("summary");
+        summary.textContent = "raw";
+        const pre = document.createElement("pre");
+        pre.textContent = rawDetail;
+        details.append(summary, pre);
+        main.append(details);
       }
+
+      item.append(meta, main);
       message.stageList.append(item);
-      while (message.stageList.children.length > 4) {
-        message.stageList.firstElementChild.remove();
-      }
       messagesEl?.scrollTo({ top: messagesEl.scrollHeight });
+    }
+
+    function updateThinking(message, data) {
+      appendTraceRow(message, {
+        kind: "lifecycle",
+        status: data.status || "info",
+        stage: data.stage,
+        label: data.label || data.stage || "处理中",
+        detail: data.detail || "",
+      });
     }
 
     function collapseThinking(message) {
       if (!message.stagePanel) return;
       message.stagePanel.classList.add("assistant-thinking--collapsed");
-      message.stagePanel.hidden = true;
     }
 
     function addMessageActions(message) {
@@ -608,8 +727,11 @@ const helpItems = [
     }
 
     function resetJobState() {
+      stopHeartbeat();
       sessionStorage.removeItem("runnerJobId");
       state.jobId = "";
+      state.heartbeatFailures = 0;
+      state.heartbeatWarningShown = false;
       filesEl?.replaceChildren();
     }
 
@@ -627,24 +749,60 @@ const helpItems = [
     }
 
     async function ensureJob() {
-      if (state.jobId) return state.jobId;
+      if (state.jobId) {
+        startHeartbeat({ immediate: false });
+        return state.jobId;
+      }
       const response = await api("/jobs", { method: "POST", headers: authHeaders() });
       const payload = await response.json();
       state.jobId = payload.job.id;
       sessionStorage.setItem("runnerJobId", state.jobId);
+      startHeartbeat();
       return state.jobId;
     }
 
-    function startHeartbeat() {
+    function stopHeartbeat() {
       window.clearInterval(state.heartbeatTimer);
-      state.heartbeatTimer = window.setInterval(async () => {
-        if (!state.token || !state.jobId) return;
-        try {
-          await api(`/jobs/${state.jobId}/heartbeat`, { method: "POST", headers: authHeaders() });
-        } catch {
-          window.clearInterval(state.heartbeatTimer);
+      state.heartbeatTimer = 0;
+    }
+
+    async function sendHeartbeat() {
+      if (!state.token || !state.jobId) return true;
+      try {
+        await api(`/jobs/${state.jobId}/heartbeat`, { method: "POST", headers: authHeaders() });
+        state.heartbeatFailures = 0;
+        state.heartbeatWarningShown = false;
+        return true;
+      } catch (error) {
+        if (isMissingJobError(error)) {
+          resetJobState();
+          setStatus("当前任务记录已清理，将在下次发送时重新创建任务。");
+          return false;
         }
-      }, 15000);
+
+        state.heartbeatFailures += 1;
+        if (state.heartbeatFailures >= HEARTBEAT_FAILURE_LIMIT && !state.heartbeatWarningShown) {
+          state.heartbeatWarningShown = true;
+          setStatus("Runner 连接不稳定，正在等待你重新操作。");
+        }
+        return false;
+      }
+    }
+
+    async function ensureHeartbeat({ immediate = true } = {}) {
+      startHeartbeat({ immediate: false });
+      if (immediate) return sendHeartbeat();
+      return true;
+    }
+
+    function startHeartbeat({ immediate = true } = {}) {
+      if (!state.token || !state.jobId) return;
+      if (!state.heartbeatTimer) {
+        state.heartbeatTimer = window.setInterval(() => {
+          void sendHeartbeat();
+        }, HEARTBEAT_INTERVAL_MS);
+      }
+      if (immediate) void sendHeartbeat();
     }
 
     async function initializeSession() {
@@ -655,7 +813,11 @@ const helpItems = [
       }
       setStatus("正在创建任务。");
       await ensureJob();
-      startHeartbeat();
+      await ensureHeartbeat({ immediate: true });
+      if (!state.jobId) {
+        await ensureJob();
+        await ensureHeartbeat({ immediate: true });
+      }
       await refreshBudget();
       state.authenticated = true;
       accessModal.hidden = true;
@@ -697,6 +859,11 @@ const helpItems = [
       if (!files?.length) return;
       if (!requireAuthenticated()) return;
       await ensureJob();
+      await ensureHeartbeat({ immediate: true });
+      if (!state.jobId) {
+        await ensureJob();
+        await ensureHeartbeat({ immediate: true });
+      }
       for (const file of files) {
         const formData = new FormData();
         formData.append("file", file);
@@ -752,6 +919,9 @@ const helpItems = [
 
       try {
         await ensureJob();
+        await ensureHeartbeat({ immediate: true });
+        if (!state.jobId) await ensureJob();
+        await ensureHeartbeat({ immediate: true });
         let response;
         try {
           response = await api(`/jobs/${state.jobId}/messages`, {
@@ -764,6 +934,7 @@ const helpItems = [
           setStatus("当前任务记录已被清理，正在创建新任务。");
           updateThinking(assistant, { label: "重新创建任务", detail: "旧任务记录已清理，正在创建新的后端任务。" });
           await recreateJob();
+          await ensureHeartbeat({ immediate: true });
           response = await api(`/jobs/${state.jobId}/messages`, {
             method: "POST",
             headers: authHeaders({ "content-type": "application/json" }),
@@ -780,8 +951,14 @@ const helpItems = [
           if (done) break;
           buffer += decoder.decode(value, { stream: true });
           buffer = parseSse(buffer, (event, data) => {
+            if (event === "trace") {
+              appendTraceRow(assistant, data);
+              if (data.status === "started" || data.status === "running" || data.status === "retrying") {
+                setStatus(data.label || "处理中");
+              }
+            }
             if (event === "stage") {
-              updateThinking(assistant, data);
+              if (!assistant.traceRows.length) updateThinking(assistant, data);
               setStatus(data.label || "处理中");
             }
             if (event === "delta") {
@@ -859,9 +1036,7 @@ const helpItems = [
       if (!state.jobId) return;
       try {
         await api(`/jobs/${state.jobId}/cleanup`, { method: "POST", headers: authHeaders() });
-        sessionStorage.removeItem("runnerJobId");
-        state.jobId = "";
-        filesEl.replaceChildren();
+        resetJobState();
         setStatus("当前任务已清理。");
       } catch (error) {
         setStatus(error.message || "清理失败。");
