@@ -182,7 +182,7 @@ const helpItems = [
     <div class="assistant-toast" id="runner-toast" role="status" hidden></div>
   </section>
 
-  <script>
+  <script is:inline>
     // @ts-nocheck
     const root = document.querySelector("[data-runner-api-base]");
     const apiBase = root?.getAttribute("data-runner-api-base") || "";
