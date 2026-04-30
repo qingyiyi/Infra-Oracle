@@ -595,9 +595,27 @@ const helpItems = [
       const response = await fetch(runnerApiUrl(path), options);
       if (!response.ok) {
         const payload = await response.json().catch(() => ({}));
-        throw new Error(payload.message || `请求失败：${response.status}`);
+        const error = new Error(payload.message || `请求失败：${response.status}`);
+        error.status = response.status;
+        error.code = payload.error || "";
+        throw error;
       }
       return response;
+    }
+
+    function isMissingJobError(error) {
+      return error?.status === 404 && error?.code === "job_not_found";
+    }
+
+    function resetJobState() {
+      sessionStorage.removeItem("runnerJobId");
+      state.jobId = "";
+      filesEl?.replaceChildren();
+    }
+
+    async function recreateJob() {
+      resetJobState();
+      return ensureJob();
     }
 
     async function refreshBudget() {
@@ -734,11 +752,24 @@ const helpItems = [
 
       try {
         await ensureJob();
-        const response = await api(`/jobs/${state.jobId}/messages`, {
-          method: "POST",
-          headers: authHeaders({ "content-type": "application/json" }),
-          body: JSON.stringify({ message }),
-        });
+        let response;
+        try {
+          response = await api(`/jobs/${state.jobId}/messages`, {
+            method: "POST",
+            headers: authHeaders({ "content-type": "application/json" }),
+            body: JSON.stringify({ message }),
+          });
+        } catch (error) {
+          if (!isMissingJobError(error)) throw error;
+          setStatus("当前任务记录已被清理，正在创建新任务。");
+          updateThinking(assistant, { label: "重新创建任务", detail: "旧任务记录已清理，正在创建新的后端任务。" });
+          await recreateJob();
+          response = await api(`/jobs/${state.jobId}/messages`, {
+            method: "POST",
+            headers: authHeaders({ "content-type": "application/json" }),
+            body: JSON.stringify({ message }),
+          });
+        }
         if (!response.body) throw new Error("浏览器无法读取流式响应。");
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
@@ -766,14 +797,22 @@ const helpItems = [
               updateActionState(assistant);
             }
             if (event === "error") {
-              setStatus(data.message || "任务失败。");
+              const messageText = data.message || "任务失败。";
+              assistant.targetMarkdown = messageText;
+              assistant.visibleMarkdown = messageText;
+              assistant.body.innerHTML = renderMarkdown(messageText);
+              updateActionState(assistant);
+              setStatus(messageText);
               collapseThinking(assistant);
-              const retry = document.createElement("button");
-              retry.type = "button";
-              retry.className = "assistant-retry";
-              retry.textContent = "重试";
-              retry.addEventListener("click", () => sendMessage(state.lastMessage));
-              assistant.article.append(retry);
+              if (data.error === "job_not_found") resetJobState();
+              if (data.canRetry !== false) {
+                const retry = document.createElement("button");
+                retry.type = "button";
+                retry.className = "assistant-retry";
+                retry.textContent = "重试";
+                retry.addEventListener("click", () => sendMessage(state.lastMessage));
+                assistant.article.append(retry);
+              }
             }
             if (event === "done") {
               completed = true;
@@ -786,7 +825,13 @@ const helpItems = [
         await refreshBudget();
       } catch (error) {
         collapseThinking(assistant);
-        setStatus(error.message || "任务失败，请联系管理员。");
+        if (isMissingJobError(error)) resetJobState();
+        const messageText = error.message || "任务失败，请联系管理员。";
+        assistant.targetMarkdown = messageText;
+        assistant.visibleMarkdown = messageText;
+        assistant.body.innerHTML = renderMarkdown(messageText);
+        updateActionState(assistant);
+        setStatus(messageText);
       } finally {
         state.busy = false;
         setRunnerInteractive(state.authenticated);
