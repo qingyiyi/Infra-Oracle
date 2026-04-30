@@ -1,6 +1,8 @@
 ---
 import BaseLayout from "../../layouts/BaseLayout.astro";
 
+const runnerApiBase = import.meta.env.PUBLIC_RUNNER_API_BASE ?? (import.meta.env.DEV ? "http://127.0.0.1:8787/api" : "");
+
 const quickPrompts = [
   "总结文档",
   "改写润色",
@@ -12,57 +14,38 @@ const quickPrompts = [
 const toolItems = [
   {
     title: "上传资料",
-    detail: "PDF、DOCX、PPTX、PNG、JPG；后端只解析内容，不执行文件。",
+    detail: "PDF、DOCX、PPTX、TXT、Markdown、PNG、JPG；后端只保存到当前 job workspace。",
   },
   {
     title: "输出格式",
-    detail: "对话框、Markdown、Word，Word 文件由后端生成下载链接。",
+    detail: "默认流式 Markdown，完成后可下载 Markdown 或 Word。",
   },
   {
-    title: "导出 compact",
-    detail: "生成脱敏摘要，移除本机路径、IP、job id、token 和内部地址。",
+    title: "清理当前任务",
+    detail: "主动删除当前 job 的上传文件、生成文件和对话记录。",
   },
 ];
 
 const helpItems = [
   {
+    title: "Runner API",
+    detail: "GitHub Pages 通过 HTTPS API 连接后端；本机开发仍默认使用 127.0.0.1。",
+  },
+  {
     title: "默认联网",
     detail: "普通任务默认检索资料并附来源；只看上传文件时，请在消息里写明“不要联网，只看上传资料”。",
   },
   {
-    title: "来源依据",
-    detail: "优先英文论文、学校、官方机构和项目文档，中文材料作为补充。",
-  },
-  {
     title: "文件安全",
-    detail: "上传内容只作为资料解析，不作为代码执行；真实校验和隔离由后端完成。",
+    detail: "上传内容只作为资料解析，不作为代码执行；Codex 被限制在当前 job workspace 内。",
   },
   {
     title: "Word 输出",
-    detail: "没有自定义模板时使用默认论文风格模板；生成文件保存在后端任务目录，不进入 GitHub。",
+    detail: "先生成 Markdown，再由后端用 Pandoc 转成 DOCX；Pandoc 缺失时仍可下载 Markdown。",
   },
   {
     title: "额度提醒",
-    detail: "前端只显示保守额度；额度不足时提示联系维护者，不暴露真实订阅凭证。",
-  },
-];
-
-const messages = [
-  {
-    role: "assistant",
-    label: "Infra Oracle Assistant",
-    body: "可以直接描述你要处理的资料和输出形式。我会先整理任务，再默认联网检索并保留来源依据。",
-  },
-  {
-    role: "user",
-    label: "你",
-    body: "请根据我上传的论文和公开资料，整理一份中文报告，并在最后生成 Word。",
-  },
-  {
-    role: "assistant",
-    label: "Infra Oracle Assistant",
-    body: "我会按四步处理：读取资料、检索英文/学术来源、整理引用依据、输出 Markdown 并准备 DOCX 下载。",
-    sources: ["Google Scholar / paper", "official docs", "中文资料补充"],
+    detail: "第一版显示本地 `$20` 预算账本；真实订阅接口后续再接。",
   },
 ];
 ---
@@ -70,21 +53,21 @@ const messages = [
 <BaseLayout
   active="runner"
   title="Infra Oracle Assistant | GitHub Page / AI Infra & Codex Lab"
-  description="面向普通协作者的 Infra Oracle Assistant 静态原型，展示 GPT 风格对话、任务提示、共享口令和 Help 入口。"
+  description="面向普通协作者的 Infra Oracle Assistant，Runner 后端可用时支持共享口令、上传、流式 Markdown 和下载。"
 >
-  <section class="assistant-page" aria-labelledby="assistant-title">
+  <section class="assistant-page" aria-labelledby="assistant-title" data-runner-api-base={runnerApiBase}>
     <div class="assistant-topbar">
       <div class="assistant-titleblock">
-        <p class="mono-label">Collaborator workspace</p>
+        <p class="mono-label">Runner workspace</p>
         <h1 id="assistant-title">Infra Oracle Assistant</h1>
       </div>
 
       <div class="assistant-topbar__right">
         <span class="assistant-pill">gpt-5.5</span>
-        <span class="assistant-pill assistant-pill--warning">余额预警</span>
-        <details class="assistant-help">
-          <summary>Help</summary>
-          <div class="assistant-popover assistant-popover--right">
+        <span class="assistant-pill" id="runner-budget-pill">额度池 --</span>
+        <div class="assistant-help assistant-help--top">
+          <button type="button" class="assistant-help-trigger" aria-describedby="runner-top-help">Help</button>
+          <div class="assistant-popover assistant-popover--right" id="runner-top-help" role="tooltip">
             <h2>使用说明</h2>
             <ul>
               {helpItems.map((item) => (
@@ -95,53 +78,53 @@ const messages = [
               ))}
             </ul>
           </div>
-        </details>
+        </div>
       </div>
     </div>
 
     <div class="assistant-shell">
-      <div class="assistant-access-modal" role="dialog" aria-labelledby="runner-access-title">
+      <div class="assistant-access-modal" id="runner-access-modal" role="dialog" aria-labelledby="runner-access-title">
         <p class="mono-label">Shared access</p>
         <h2 id="runner-access-title">输入共享访问口令</h2>
-        <div class="assistant-access-form">
+        <form class="assistant-access-form" id="runner-access-form">
           <label for="runner-shared-secret">共享访问口令</label>
           <input
             id="runner-shared-secret"
+            name="passphrase"
             type="password"
             autocomplete="off"
             inputmode="text"
             placeholder="由维护者提供"
           />
-          <button type="button">进入</button>
-        </div>
-        <p>真实口令只发往后端校验，不能写进前端源码或 GitHub 仓库。</p>
+          <button type="submit">进入</button>
+        </form>
+        <p id="runner-access-error">口令只发往 Runner 后端校验，不写进前端源码或 GitHub。</p>
       </div>
 
-      <div class="assistant-balance-toast" role="status">
+      <div class="assistant-balance-toast" id="runner-balance-toast" role="status" hidden>
         当前可用额度较低，请联系维护者继续使用
       </div>
 
-      <div class="assistant-chat" aria-label="登录后的对话界面预览">
-        <div class="assistant-message-list">
-          {messages.map((message) => (
-            <article class:list={["assistant-message", `assistant-message--${message.role}`]}>
-              <p class="assistant-message__role">{message.label}</p>
-              <p>{message.body}</p>
-              {message.sources && (
-                <div class="assistant-source-row" aria-label="来源类型">
-                  {message.sources.map((source) => (
-                    <span>{source}</span>
-                  ))}
-                </div>
-              )}
-            </article>
-          ))}
+      <div class="assistant-chat" aria-label="Runner live conversation">
+        <div class="assistant-message-list" id="runner-messages">
+          <article class="assistant-message assistant-message--assistant">
+            <p class="assistant-message__role">Infra Oracle Assistant</p>
+            <div class="assistant-message__content">
+              <p>我可以帮你总结资料、改写文本、提取关键信息，也可以联网整理来源并生成 Markdown 或 Word。输入任务，或先上传文件开始。</p>
+            </div>
+          </article>
         </div>
 
         <div class="assistant-composer" aria-label="任务输入区">
+          <div class="assistant-inline-status" id="runner-status">
+            Runner API：{runnerApiBase || "未配置"}
+          </div>
+
+          <div class="assistant-file-list" id="runner-files" aria-label="已上传文件"></div>
+
           <div class="assistant-quick-row" aria-label="常用任务提示">
             {quickPrompts.map((prompt) => (
-              <button type="button" class="assistant-chip">{prompt}</button>
+              <button type="button" class="assistant-chip" data-runner-prompt={prompt}>{prompt}</button>
             ))}
           </div>
 
@@ -158,6 +141,14 @@ const messages = [
                     </li>
                   ))}
                 </ul>
+                <label class="assistant-upload-button" for="runner-file-input">选择文件</label>
+                <input
+                  id="runner-file-input"
+                  type="file"
+                  multiple
+                  accept=".pdf,.docx,.pptx,.txt,.md,.markdown,.png,.jpg,.jpeg"
+                />
+                <button type="button" class="assistant-menu-button" id="runner-cleanup">清理当前任务</button>
               </div>
             </details>
 
@@ -168,12 +159,12 @@ const messages = [
               placeholder="描述你要处理的文字任务。默认联网检索并附来源；只看上传资料请直接说明。"
             ></textarea>
 
-            <details class="assistant-help assistant-help--compact">
-              <summary aria-label="打开输入帮助">?</summary>
+            <div class="assistant-help assistant-help--compact">
+              <button type="button" class="assistant-help-trigger" aria-label="显示输入帮助">?</button>
               <div class="assistant-popover assistant-popover--right assistant-popover--up">
                 <h2>提示</h2>
                 <ul>
-                  {helpItems.slice(0, 3).map((item) => (
+                  {helpItems.slice(1, 4).map((item) => (
                     <li>
                       <strong>{item.title}</strong>
                       <span>{item.detail}</span>
@@ -181,12 +172,671 @@ const messages = [
                   ))}
                 </ul>
               </div>
-            </details>
+            </div>
 
-            <button type="button" class="assistant-send" aria-label="发送消息">↑</button>
+            <button type="button" class="assistant-send" id="runner-send" aria-label="发送消息">↑</button>
           </div>
         </div>
       </div>
     </div>
+    <div class="assistant-toast" id="runner-toast" role="status" hidden></div>
   </section>
+
+  <script>
+    // @ts-nocheck
+    const root = document.querySelector("[data-runner-api-base]");
+    const apiBase = root?.getAttribute("data-runner-api-base") || "";
+    const accessModal = document.querySelector("#runner-access-modal");
+    const accessForm = document.querySelector("#runner-access-form");
+    const accessInput = document.querySelector("#runner-shared-secret");
+    const accessSubmit = accessForm?.querySelector("button[type='submit']");
+    const accessError = document.querySelector("#runner-access-error");
+    const budgetPill = document.querySelector("#runner-budget-pill");
+    const balanceToast = document.querySelector("#runner-balance-toast");
+    const messagesEl = document.querySelector("#runner-messages");
+    const statusEl = document.querySelector("#runner-status");
+    const filesEl = document.querySelector("#runner-files");
+    const messageInput = document.querySelector("#runner-message");
+    const sendButton = document.querySelector("#runner-send");
+    const fileInput = document.querySelector("#runner-file-input");
+    const cleanupButton = document.querySelector("#runner-cleanup");
+    const toastEl = document.querySelector("#runner-toast");
+    const quickPromptButtons = document.querySelectorAll("[data-runner-prompt]");
+
+    const state = {
+      token: sessionStorage.getItem("runnerSessionToken") || "",
+      jobId: sessionStorage.getItem("runnerJobId") || "",
+      heartbeatTimer: 0,
+      lastMessage: "",
+      busy: false,
+      authenticated: false,
+    };
+
+    function setStatus(message) {
+      if (statusEl) statusEl.textContent = message;
+    }
+
+    function showToast(message) {
+      if (!toastEl) return;
+      toastEl.textContent = message;
+      toastEl.hidden = false;
+      window.clearTimeout(showToast.timer);
+      showToast.timer = window.setTimeout(() => {
+        toastEl.hidden = true;
+      }, 2200);
+    }
+
+    function setAccessBusy(isBusy) {
+      if (!accessSubmit || !accessInput) return;
+      accessSubmit.disabled = isBusy;
+      accessInput.disabled = isBusy;
+      accessSubmit.textContent = isBusy ? "正在验证" : "进入";
+    }
+
+    function setRunnerInteractive(isEnabled) {
+      if (messageInput) messageInput.disabled = !isEnabled;
+      if (sendButton) sendButton.disabled = !isEnabled || state.busy;
+      if (fileInput) fileInput.disabled = !isEnabled;
+      if (cleanupButton) cleanupButton.disabled = !isEnabled;
+      quickPromptButtons.forEach((button) => {
+        button.disabled = !isEnabled;
+      });
+    }
+
+    function requireAuthenticated() {
+      if (state.authenticated && state.token) return true;
+      accessModal.hidden = false;
+      accessError.textContent = "请先输入共享访问口令。";
+      setStatus("请先完成共享口令验证。");
+      return false;
+    }
+
+    function authHeaders(extra = {}) {
+      return {
+        ...extra,
+        authorization: `Bearer ${state.token}`,
+      };
+    }
+
+    function appendMessage(role, content = "", options = {}) {
+      const article = document.createElement("article");
+      article.className = `assistant-message assistant-message--${role}`;
+      const label = document.createElement("p");
+      label.className = "assistant-message__role";
+      label.textContent = role === "user" ? "User" : "Infra Oracle Assistant";
+      const body = document.createElement("div");
+      body.className = "assistant-message__content markdown-body";
+      body.innerHTML = role === "assistant" ? renderMarkdown(content) : `<p>${escapeHtml(content)}</p>`;
+      article.append(label, body);
+
+      const message = {
+        role,
+        article,
+        body,
+        targetMarkdown: content,
+        visibleMarkdown: content,
+        renderTimer: 0,
+        artifacts: [],
+        stagePanel: null,
+        stageCurrent: null,
+        stageList: null,
+        actionBar: null,
+        copyButton: null,
+        downloadButton: null,
+        downloadMenu: null,
+      };
+
+      if (role === "assistant" && options.live) {
+        addThinkingPanel(message);
+        addMessageActions(message);
+      }
+
+      messagesEl?.append(article);
+      messagesEl?.scrollTo({ top: messagesEl.scrollHeight });
+      return message;
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    function safeHref(raw) {
+      try {
+        const url = new URL(raw, window.location.href);
+        return ["http:", "https:", "mailto:"].includes(url.protocol) ? url.href : "";
+      } catch {
+        return "";
+      }
+    }
+
+    function renderInline(value) {
+      return escapeHtml(value)
+        .replace(/`([^`]+)`/g, "<code>$1</code>")
+        .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+        .replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_, text, href) => {
+        const safe = safeHref(href);
+        return safe ? `<a class="source-link" href="${safe}" target="_blank" rel="noreferrer">${escapeHtml(text)}</a>` : escapeHtml(text);
+      });
+    }
+
+    function renderMarkdown(markdown) {
+      const lines = String(markdown || "").split(/\r?\n/);
+      const html = [];
+      let inCode = false;
+      let listOpen = false;
+      let paragraph = [];
+
+      function closeParagraph() {
+        if (paragraph.length) {
+          html.push(`<p>${paragraph.map(renderInline).join("<br>")}</p>`);
+          paragraph = [];
+        }
+      }
+      function closeList() {
+        if (listOpen) {
+          html.push("</ul>");
+          listOpen = false;
+        }
+      }
+
+      for (const line of lines) {
+        if (line.trim().startsWith("```")) {
+          closeParagraph();
+          closeList();
+          html.push(inCode ? "</code></pre>" : "<pre><code>");
+          inCode = !inCode;
+          continue;
+        }
+        if (inCode) {
+          html.push(`${escapeHtml(line)}\n`);
+          continue;
+        }
+        if (!line.trim()) {
+          closeParagraph();
+          closeList();
+          continue;
+        }
+        const heading = line.match(/^(#{1,4})\s+(.+)$/);
+        if (heading) {
+          closeParagraph();
+          closeList();
+          const level = Math.min(4, heading[1].length + 1);
+          html.push(`<h${level}>${renderInline(heading[2])}</h${level}>`);
+          continue;
+        }
+        const item = line.match(/^\s*(?:[-*]|\d+\.)\s+(.+)$/);
+        if (item) {
+          closeParagraph();
+          if (!listOpen) {
+            html.push("<ul>");
+            listOpen = true;
+          }
+          html.push(`<li>${renderInline(item[1])}</li>`);
+          continue;
+        }
+        paragraph.push(line);
+      }
+      closeParagraph();
+      closeList();
+      if (inCode) html.push("</code></pre>");
+      return html.join("");
+    }
+
+    function addThinkingPanel(message) {
+      const panel = document.createElement("div");
+      panel.className = "assistant-thinking";
+      const current = document.createElement("div");
+      current.className = "assistant-thinking__current";
+      current.innerHTML = `<span>准备任务</span><i></i>`;
+      const list = document.createElement("ul");
+      list.className = "assistant-thinking__list";
+      panel.append(current, list);
+      message.article.insertBefore(panel, message.body);
+      message.stagePanel = panel;
+      message.stageCurrent = current;
+      message.stageList = list;
+    }
+
+    function updateThinking(message, data) {
+      if (!message.stagePanel) return;
+      const label = data.label || data.stage || "处理中";
+      const detail = data.detail || "";
+      message.stagePanel.hidden = false;
+      message.stageCurrent.innerHTML = "";
+      const title = document.createElement("span");
+      title.textContent = label;
+      const dots = document.createElement("i");
+      message.stageCurrent.append(title, dots);
+
+      const item = document.createElement("li");
+      const itemTitle = document.createElement("strong");
+      itemTitle.textContent = label;
+      item.append(itemTitle);
+      if (detail) {
+        const itemDetail = document.createElement("span");
+        itemDetail.textContent = detail;
+        item.append(itemDetail);
+      }
+      message.stageList.append(item);
+      while (message.stageList.children.length > 4) {
+        message.stageList.firstElementChild.remove();
+      }
+      messagesEl?.scrollTo({ top: messagesEl.scrollHeight });
+    }
+
+    function collapseThinking(message) {
+      if (!message.stagePanel) return;
+      message.stagePanel.classList.add("assistant-thinking--collapsed");
+      message.stagePanel.hidden = true;
+    }
+
+    function addMessageActions(message) {
+      const bar = document.createElement("div");
+      bar.className = "assistant-message-actions";
+      const copy = document.createElement("button");
+      copy.type = "button";
+      copy.className = "assistant-icon-button";
+      copy.setAttribute("aria-label", "复制回答");
+      copy.textContent = "⧉";
+      copy.addEventListener("click", () => copyMessage(message));
+
+      const downloadWrap = document.createElement("div");
+      downloadWrap.className = "assistant-download";
+      const download = document.createElement("button");
+      download.type = "button";
+      download.className = "assistant-icon-button";
+      download.setAttribute("aria-label", "下载回答");
+      download.textContent = "↓";
+      const menu = document.createElement("div");
+      menu.className = "assistant-download-menu";
+      menu.hidden = true;
+      const markdown = document.createElement("button");
+      markdown.type = "button";
+      markdown.textContent = "Markdown";
+      markdown.addEventListener("click", () => handleDownload(message, "markdown"));
+      const word = document.createElement("button");
+      word.type = "button";
+      word.textContent = "Word";
+      word.addEventListener("click", () => handleDownload(message, "docx"));
+      menu.append(markdown, word);
+      download.addEventListener("click", (event) => {
+        event.stopPropagation();
+        closeDownloadMenus(menu);
+        menu.hidden = !menu.hidden;
+      });
+      downloadWrap.append(download, menu);
+      bar.append(copy, downloadWrap);
+      message.article.append(bar);
+      message.actionBar = bar;
+      message.copyButton = copy;
+      message.downloadButton = download;
+      message.downloadMenu = menu;
+      updateActionState(message);
+    }
+
+    function closeDownloadMenus(except = null) {
+      document.querySelectorAll(".assistant-download-menu").forEach((menu) => {
+        if (menu !== except) menu.hidden = true;
+      });
+    }
+
+    function updateActionState(message) {
+      const hasText = Boolean((message.targetMarkdown || message.visibleMarkdown || "").trim());
+      if (message.copyButton) message.copyButton.disabled = !hasText;
+      if (message.downloadButton) message.downloadButton.disabled = !hasText && message.artifacts.length === 0;
+    }
+
+    async function copyMessage(message) {
+      const text = (message.targetMarkdown || message.visibleMarkdown || message.body.innerText || "").trim();
+      if (!text) {
+        showToast("暂无可复制内容");
+        return;
+      }
+      try {
+        await navigator.clipboard.writeText(text);
+        showToast("已复制");
+      } catch {
+        const textarea = document.createElement("textarea");
+        textarea.value = text;
+        textarea.setAttribute("readonly", "");
+        textarea.style.position = "fixed";
+        textarea.style.opacity = "0";
+        document.body.append(textarea);
+        textarea.select();
+        document.execCommand("copy");
+        textarea.remove();
+        showToast("已复制");
+      }
+    }
+
+    async function handleDownload(message, type) {
+      closeDownloadMenus();
+      const artifact = message.artifacts.find((item) => item.type === type);
+      if (!artifact) {
+        showToast(type === "docx" ? "Word 暂不可用，请先使用 Markdown" : "完成后可下载 Markdown");
+        return;
+      }
+      try {
+        await downloadArtifact(artifact);
+      } catch (error) {
+        setStatus(error.message || "下载失败。");
+      }
+    }
+
+    function streamMarkdown(message, chunk) {
+      message.targetMarkdown += chunk;
+      updateActionState(message);
+      if (message.renderTimer) return;
+      message.renderTimer = window.setInterval(() => {
+        const remaining = message.targetMarkdown.length - message.visibleMarkdown.length;
+        if (remaining <= 0) {
+          window.clearInterval(message.renderTimer);
+          message.renderTimer = 0;
+          return;
+        }
+        const step = Math.min(remaining, remaining > 240 ? 28 : 12);
+        message.visibleMarkdown = message.targetMarkdown.slice(0, message.visibleMarkdown.length + step);
+        message.body.innerHTML = renderMarkdown(message.visibleMarkdown);
+        messagesEl?.scrollTo({ top: messagesEl.scrollHeight });
+      }, 24);
+    }
+
+    function flushMarkdown(message) {
+      return new Promise((resolve) => {
+        const finish = () => {
+          if (message.renderTimer) {
+            window.clearInterval(message.renderTimer);
+            message.renderTimer = 0;
+          }
+          message.visibleMarkdown = message.targetMarkdown;
+          message.body.innerHTML = renderMarkdown(message.visibleMarkdown);
+          updateActionState(message);
+          messagesEl?.scrollTo({ top: messagesEl.scrollHeight });
+          resolve();
+        };
+        window.setTimeout(finish, 80);
+      });
+    }
+
+    function parseSse(buffer, onEvent) {
+      const events = buffer.split("\n\n");
+      const rest = events.pop() || "";
+      for (const eventText of events) {
+        let event = "message";
+        let data = "";
+        for (const line of eventText.split("\n")) {
+          if (line.startsWith("event:")) event = line.slice(6).trim();
+          if (line.startsWith("data:")) data += line.slice(5).trim();
+        }
+        if (data) {
+          try {
+            onEvent(event, JSON.parse(data));
+          } catch {
+            onEvent(event, { text: data });
+          }
+        }
+      }
+      return rest;
+    }
+
+    function runnerApiUrl(path) {
+      const base = apiBase.replace(/\/$/, "");
+      const runnerBase = base.endsWith("/runner") ? base : `${base}/runner`;
+      return `${runnerBase}${path}`;
+    }
+
+    async function api(path, options = {}) {
+      if (!apiBase) throw new Error("Runner API 未配置。请检查 PUBLIC_RUNNER_API_BASE 构建变量。");
+      const response = await fetch(runnerApiUrl(path), options);
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}));
+        throw new Error(payload.message || `请求失败：${response.status}`);
+      }
+      return response;
+    }
+
+    async function refreshBudget() {
+      if (!state.token) return;
+      const response = await api("/budget", { headers: authHeaders() });
+      const budget = await response.json();
+      budgetPill.textContent = `额度池 $${Number(budget.availableUsd).toFixed(2)}`;
+      balanceToast.hidden = !budget.lowBalance;
+    }
+
+    async function ensureJob() {
+      if (state.jobId) return state.jobId;
+      const response = await api("/jobs", { method: "POST", headers: authHeaders() });
+      const payload = await response.json();
+      state.jobId = payload.job.id;
+      sessionStorage.setItem("runnerJobId", state.jobId);
+      return state.jobId;
+    }
+
+    function startHeartbeat() {
+      window.clearInterval(state.heartbeatTimer);
+      state.heartbeatTimer = window.setInterval(async () => {
+        if (!state.token || !state.jobId) return;
+        try {
+          await api(`/jobs/${state.jobId}/heartbeat`, { method: "POST", headers: authHeaders() });
+        } catch {
+          window.clearInterval(state.heartbeatTimer);
+        }
+      }, 15000);
+    }
+
+    async function initializeSession() {
+      if (!state.token) {
+        state.authenticated = false;
+        setRunnerInteractive(false);
+        return;
+      }
+      setStatus("正在创建任务。");
+      await ensureJob();
+      startHeartbeat();
+      await refreshBudget();
+      state.authenticated = true;
+      accessModal.hidden = true;
+      accessError.textContent = "已连接。";
+      setRunnerInteractive(true);
+      showToast("已连接");
+      setStatus("Runner 后端已连接，可以发送任务。");
+    }
+
+    accessForm?.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      if (accessSubmit?.disabled) return;
+      setAccessBusy(true);
+      accessError.textContent = "正在验证共享访问口令。";
+      try {
+        const passphrase = accessInput.value.trim();
+        if (!passphrase) {
+          accessError.textContent = "请输入共享访问口令。";
+          return;
+        }
+        const response = await api("/auth/session", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ passphrase }),
+        });
+        const payload = await response.json();
+        state.token = payload.token;
+        sessionStorage.setItem("runnerSessionToken", state.token);
+        accessInput.value = "";
+        await initializeSession();
+      } catch (error) {
+        accessError.textContent = error.message || "登录失败，请联系管理员。";
+      } finally {
+        setAccessBusy(false);
+      }
+    });
+
+    async function uploadFiles(files) {
+      if (!files?.length) return;
+      if (!requireAuthenticated()) return;
+      await ensureJob();
+      for (const file of files) {
+        const formData = new FormData();
+        formData.append("file", file);
+        setStatus(`正在上传 ${file.name}`);
+        const response = await api(`/jobs/${state.jobId}/files`, {
+          method: "POST",
+          headers: authHeaders(),
+          body: formData,
+        });
+        const payload = await response.json();
+        const item = document.createElement("span");
+        item.textContent = payload.file.originalName;
+        filesEl.append(item);
+      }
+      setStatus("文件已上传。");
+    }
+
+    fileInput?.addEventListener("change", async () => {
+      try {
+        await uploadFiles(fileInput.files);
+        fileInput.value = "";
+      } catch (error) {
+        setStatus(error.message || "文件上传失败。");
+      }
+    });
+
+    async function downloadArtifact(artifact) {
+      const response = await api(`/jobs/${state.jobId}/artifacts/${artifact.id}`, {
+        headers: authHeaders(),
+      });
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = artifact.filename;
+      document.body.append(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    }
+
+    async function sendMessage(message = messageInput.value.trim()) {
+      if (!requireAuthenticated()) return;
+      if (!message || state.busy) return;
+      state.busy = true;
+      state.lastMessage = message;
+      setRunnerInteractive(false);
+      appendMessage("user", message);
+      messageInput.value = "";
+      const assistant = appendMessage("assistant", "", { live: true });
+      updateThinking(assistant, { label: "准备任务", detail: "正在创建本次对话任务。" });
+      setStatus("正在准备任务。");
+
+      try {
+        await ensureJob();
+        const response = await api(`/jobs/${state.jobId}/messages`, {
+          method: "POST",
+          headers: authHeaders({ "content-type": "application/json" }),
+          body: JSON.stringify({ message }),
+        });
+        if (!response.body) throw new Error("浏览器无法读取流式响应。");
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+        let completed = false;
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          buffer = parseSse(buffer, (event, data) => {
+            if (event === "stage") {
+              updateThinking(assistant, data);
+              setStatus(data.label || "处理中");
+            }
+            if (event === "delta") {
+              streamMarkdown(assistant, data.text || "");
+            }
+            if (event === "status") setStatus(data.status === "retrying" ? "正在自动重试" : "正在处理");
+            if (event === "notice") {
+              setStatus(data.message || "提示");
+              showToast(data.message || "提示");
+            }
+            if (event === "artifact") {
+              assistant.artifacts.push(data.artifact);
+              updateActionState(assistant);
+            }
+            if (event === "error") {
+              setStatus(data.message || "任务失败。");
+              collapseThinking(assistant);
+              const retry = document.createElement("button");
+              retry.type = "button";
+              retry.className = "assistant-retry";
+              retry.textContent = "重试";
+              retry.addEventListener("click", () => sendMessage(state.lastMessage));
+              assistant.article.append(retry);
+            }
+            if (event === "done") {
+              completed = true;
+              setStatus("任务完成。");
+            }
+          });
+        }
+        await flushMarkdown(assistant);
+        if (completed) collapseThinking(assistant);
+        await refreshBudget();
+      } catch (error) {
+        collapseThinking(assistant);
+        setStatus(error.message || "任务失败，请联系管理员。");
+      } finally {
+        state.busy = false;
+        setRunnerInteractive(state.authenticated);
+      }
+    }
+
+    sendButton?.addEventListener("click", () => sendMessage());
+    messageInput?.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" && !event.shiftKey) {
+        event.preventDefault();
+        sendMessage();
+      }
+    });
+
+    document.querySelectorAll("[data-runner-prompt]").forEach((button) => {
+      button.addEventListener("click", () => {
+        if (!requireAuthenticated()) return;
+        messageInput.value = button.getAttribute("data-runner-prompt");
+        messageInput.focus();
+      });
+    });
+
+    cleanupButton?.addEventListener("click", async () => {
+      if (!requireAuthenticated()) return;
+      if (!state.jobId) return;
+      try {
+        await api(`/jobs/${state.jobId}/cleanup`, { method: "POST", headers: authHeaders() });
+        sessionStorage.removeItem("runnerJobId");
+        state.jobId = "";
+        filesEl.replaceChildren();
+        setStatus("当前任务已清理。");
+      } catch (error) {
+        setStatus(error.message || "清理失败。");
+      }
+    });
+
+    document.addEventListener("click", () => closeDownloadMenus());
+
+    if (!apiBase) {
+      setRunnerInteractive(false);
+      setStatus("Runner API 未配置。请检查 GitHub Pages 构建环境变量。");
+    } else {
+      setRunnerInteractive(false);
+      initializeSession().catch(() => {
+        sessionStorage.removeItem("runnerSessionToken");
+        state.token = "";
+        state.authenticated = false;
+        setRunnerInteractive(false);
+        accessModal.hidden = false;
+      });
+    }
+  </script>
 </BaseLayout>

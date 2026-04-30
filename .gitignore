@@ -21,3 +21,6 @@
 !.github/
 !.github/workflows/
 !.github/workflows/deploy.yml
+
+# Derived Hypo-Workflow compact context views.
+*.compact.*
