@@ -65,6 +65,10 @@ const helpItems = [
       <div class="assistant-topbar__right">
         <span class="assistant-pill">gpt-5.5</span>
         <span class="assistant-pill" id="runner-budget-pill">额度池 --</span>
+        <button type="button" class="assistant-pill assistant-history-toggle" id="runner-history-toggle">
+          历史
+          <span id="runner-history-count">0</span>
+        </button>
         <div class="assistant-help assistant-help--top">
           <button type="button" class="assistant-help-trigger" aria-describedby="runner-top-help">Help</button>
           <div class="assistant-popover assistant-popover--right" id="runner-top-help" role="tooltip">
@@ -104,6 +108,14 @@ const helpItems = [
       <div class="assistant-balance-toast" id="runner-balance-toast" role="status" hidden>
         当前可用额度较低，请联系维护者继续使用
       </div>
+
+      <aside class="assistant-history-panel" id="runner-history-panel" aria-label="历史会话" hidden>
+        <div class="assistant-history-panel__header">
+          <strong>历史会话</strong>
+          <button type="button" class="assistant-icon-button" id="runner-history-close" aria-label="关闭历史">×</button>
+        </div>
+        <div class="assistant-history-list" id="runner-history-list"></div>
+      </aside>
 
       <div class="assistant-chat" aria-label="Runner live conversation">
         <div class="assistant-message-list" id="runner-messages">
@@ -192,6 +204,12 @@ const helpItems = [
     const accessSubmit = accessForm?.querySelector("button[type='submit']");
     const accessError = document.querySelector("#runner-access-error");
     const budgetPill = document.querySelector("#runner-budget-pill");
+    const historyToggle = document.querySelector("#runner-history-toggle");
+    const historyCount = document.querySelector("#runner-history-count");
+    const historyPanel = document.querySelector("#runner-history-panel");
+    const historyClose = document.querySelector("#runner-history-close");
+    const historyList = document.querySelector("#runner-history-list");
+    const assistantShell = historyPanel?.closest(".assistant-shell");
     const balanceToast = document.querySelector("#runner-balance-toast");
     const messagesEl = document.querySelector("#runner-messages");
     const statusEl = document.querySelector("#runner-status");
@@ -212,8 +230,10 @@ const helpItems = [
       heartbeatFailures: 0,
       heartbeatWarningShown: false,
       lastMessage: "",
+      history: [],
       busy: false,
       authenticated: false,
+      leaving: false,
     };
 
     function setStatus(message) {
@@ -289,6 +309,7 @@ const helpItems = [
         copyButton: null,
         downloadButton: null,
         downloadMenu: null,
+        diffPanel: null,
       };
 
       if (role === "assistant" && options.live) {
@@ -429,6 +450,10 @@ const helpItems = [
         domain: data.domain || "",
         url: data.url || "",
         title: data.title || "",
+        summary: data.summary || "",
+        path: data.path || "",
+        operation: data.operation || "",
+        artifactType: data.artifactType || "",
         raw: data.raw || "",
         exitCode: data.exitCode,
       };
@@ -449,8 +474,11 @@ const helpItems = [
     function traceKindText(kind) {
       const map = {
         lifecycle: "life",
+        model_note: "model",
         tool: "tool",
         web: "web",
+        file: "file",
+        command: "cmd",
         assistant_note: "note",
         final_answer: "final",
         artifact: "file",
@@ -503,7 +531,7 @@ const helpItems = [
       const title = document.createElement("strong");
       title.textContent = trace.label;
       const detail = document.createElement("p");
-      detail.textContent = trace.detail || trace.title || trace.safeCommand || trace.domain || "";
+      detail.textContent = trace.detail || trace.summary || trace.title || trace.safeCommand || trace.domain || trace.path || "";
       main.append(title);
       if (detail.textContent) main.append(detail);
 
@@ -513,6 +541,10 @@ const helpItems = [
         trace.domain,
         trace.title,
         trace.url,
+        trace.summary,
+        trace.path,
+        trace.operation,
+        trace.artifactType,
         trace.safeCommand,
         trace.exitCode !== undefined && trace.exitCode !== null ? `exit ${trace.exitCode}` : "",
       ].filter(Boolean).forEach((value) => {
@@ -552,6 +584,11 @@ const helpItems = [
     function collapseThinking(message) {
       if (!message.stagePanel) return;
       message.stagePanel.classList.add("assistant-thinking--collapsed");
+      message.traceRows.forEach((trace, index) => {
+        const row = message.stageList?.children[index];
+        if (!row || trace.status === "failed") return;
+        if (index < message.traceRows.length - 1) row.classList.add("assistant-trace-row--folded");
+      });
     }
 
     function addMessageActions(message) {
@@ -582,7 +619,11 @@ const helpItems = [
       word.type = "button";
       word.textContent = "Word";
       word.addEventListener("click", () => handleDownload(message, "docx"));
-      menu.append(markdown, word);
+      const patch = document.createElement("button");
+      patch.type = "button";
+      patch.textContent = "Patch";
+      patch.addEventListener("click", () => handleDownload(message, "patch"));
+      menu.append(markdown, word, patch);
       download.addEventListener("click", (event) => {
         event.stopPropagation();
         closeDownloadMenus(menu);
@@ -598,6 +639,42 @@ const helpItems = [
       updateActionState(message);
     }
 
+    function renderDiffReview(message) {
+      const patchArtifact = message.artifacts.find((item) => item.type === "patch");
+      const changedFiles = patchArtifact?.metadata?.changedFiles || [];
+      if (!patchArtifact || !changedFiles.length) {
+        message.diffPanel?.remove();
+        message.diffPanel = null;
+        return;
+      }
+      if (!message.diffPanel) {
+        const panel = document.createElement("details");
+        panel.className = "assistant-diff-review";
+        const summary = document.createElement("summary");
+        summary.textContent = "文件变更";
+        const list = document.createElement("div");
+        list.className = "assistant-diff-review__list";
+        const action = document.createElement("button");
+        action.type = "button";
+        action.className = "assistant-diff-review__download";
+        action.textContent = "下载 patch";
+        action.addEventListener("click", (event) => {
+          event.preventDefault();
+          downloadArtifact(patchArtifact).catch((error) => setStatus(error.message || "下载失败。"));
+        });
+        panel.append(summary, list, action);
+        message.article.insertBefore(panel, message.actionBar || null);
+        message.diffPanel = panel;
+      }
+      const list = message.diffPanel.querySelector(".assistant-diff-review__list");
+      list.replaceChildren();
+      for (const file of changedFiles) {
+        const row = document.createElement("span");
+        row.textContent = `${file.status || "changed"} ${file.path || ""}`;
+        list.append(row);
+      }
+    }
+
     function closeDownloadMenus(except = null) {
       document.querySelectorAll(".assistant-download-menu").forEach((menu) => {
         if (menu !== except) menu.hidden = true;
@@ -608,6 +685,120 @@ const helpItems = [
       const hasText = Boolean((message.targetMarkdown || message.visibleMarkdown || "").trim());
       if (message.copyButton) message.copyButton.disabled = !hasText;
       if (message.downloadButton) message.downloadButton.disabled = !hasText && message.artifacts.length === 0;
+      renderDiffReview(message);
+    }
+
+    function formatHistoryTime(value) {
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return "";
+      return date.toLocaleString("zh-CN", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" });
+    }
+
+    function setHistoryVisible(isVisible) {
+      if (!historyPanel) return;
+      historyPanel.hidden = !isVisible;
+      assistantShell?.classList.toggle("assistant-shell--history-open", isVisible);
+      historyToggle?.setAttribute("aria-expanded", String(isVisible));
+    }
+
+    function renderHistoryList() {
+      if (!historyList) return;
+      historyList.replaceChildren();
+      if (historyCount) historyCount.textContent = String(state.history.length);
+      if (!state.history.length) {
+        const empty = document.createElement("p");
+        empty.className = "assistant-history-empty";
+        empty.textContent = "暂无历史会话";
+        historyList.append(empty);
+        return;
+      }
+
+      for (const item of state.history) {
+        const row = document.createElement("article");
+        row.className = "assistant-history-item";
+        if (item.jobId === state.jobId) row.classList.add("assistant-history-item--active");
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "assistant-history-item__main";
+        button.addEventListener("click", () => restoreHistory(item.id));
+        const title = document.createElement("strong");
+        title.textContent = item.title || "未命名会话";
+        const meta = document.createElement("span");
+        meta.textContent = `${formatHistoryTime(item.updatedAt)} · ${item.status} · ${item.artifactCount || 0} files`;
+        button.append(title, meta);
+
+        const remove = document.createElement("button");
+        remove.type = "button";
+        remove.className = "assistant-history-item__delete";
+        remove.setAttribute("aria-label", "删除历史会话");
+        remove.textContent = "×";
+        remove.addEventListener("click", (event) => {
+          event.stopPropagation();
+          deleteHistory(item.id);
+        });
+        row.append(button, remove);
+        historyList.append(row);
+      }
+    }
+
+    async function refreshHistory() {
+      if (!state.token || !state.authenticated) return;
+      try {
+        const response = await api("/history", { headers: authHeaders() });
+        const payload = await response.json();
+        state.history = Array.isArray(payload.sessions) ? payload.sessions : [];
+        renderHistoryList();
+      } catch {
+        state.history = [];
+        renderHistoryList();
+      }
+    }
+
+    function renderRestoredTrace(message, traces = []) {
+      traces.slice(0, 40).forEach((trace) => appendTraceRow(message, trace));
+      collapseThinking(message);
+    }
+
+    async function restoreHistory(historyId) {
+      if (!historyId || state.busy) return;
+      try {
+        const response = await api(`/history/${historyId}`, { headers: authHeaders() });
+        const payload = await response.json();
+        const restored = payload.session;
+        messagesEl?.replaceChildren();
+        for (const msg of restored.messages || []) {
+          if (msg.role === "system") continue;
+          const live = msg.role === "assistant";
+          const rendered = appendMessage(msg.role, msg.content || "", { live });
+          if (live) {
+            rendered.artifacts = restored.artifacts || [];
+            if (restored.traces?.length) renderRestoredTrace(rendered, restored.traces);
+            updateActionState(rendered);
+          }
+        }
+        state.jobId = restored.jobId || "";
+        if (state.jobId) sessionStorage.setItem("runnerJobId", state.jobId);
+        startHeartbeat({ immediate: false });
+        setHistoryVisible(false);
+        setStatus("历史会话已恢复。");
+      } catch (error) {
+        showToast(error.message || "历史会话不可用");
+        await refreshHistory();
+      }
+    }
+
+    async function deleteHistory(historyId) {
+      if (!historyId) return;
+      try {
+        await api(`/history/${historyId}`, { method: "DELETE", headers: authHeaders() });
+        if (state.history.some((item) => item.id === historyId && item.jobId === state.jobId)) {
+          resetJobState();
+        }
+        await refreshHistory();
+        showToast("历史会话已删除");
+      } catch (error) {
+        showToast(error.message || "删除失败");
+      }
     }
 
     async function copyMessage(message) {
@@ -637,7 +828,9 @@ const helpItems = [
       closeDownloadMenus();
       const artifact = message.artifacts.find((item) => item.type === type);
       if (!artifact) {
-        showToast(type === "docx" ? "Word 暂不可用，请先使用 Markdown" : "完成后可下载 Markdown");
+        if (type === "docx") showToast("Word 暂不可用，请先使用 Markdown");
+        else if (type === "patch") showToast("本次任务没有 workspace 变更");
+        else showToast("完成后可下载 Markdown");
         return;
       }
       try {
@@ -789,6 +982,16 @@ const helpItems = [
       }
     }
 
+    function sendLeaveCleanup() {
+      if (state.leaving || !state.token || !state.jobId) return;
+      state.leaving = true;
+      fetch(runnerApiUrl(`/jobs/${state.jobId}/cleanup`), {
+        method: "POST",
+        headers: authHeaders(),
+        keepalive: true,
+      }).catch(() => undefined);
+    }
+
     async function ensureHeartbeat({ immediate = true } = {}) {
       startHeartbeat({ immediate: false });
       if (immediate) return sendHeartbeat();
@@ -820,6 +1023,7 @@ const helpItems = [
       }
       await refreshBudget();
       state.authenticated = true;
+      await refreshHistory();
       accessModal.hidden = true;
       accessError.textContent = "已连接。";
       setRunnerInteractive(true);
@@ -1000,6 +1204,7 @@ const helpItems = [
         await flushMarkdown(assistant);
         if (completed) collapseThinking(assistant);
         await refreshBudget();
+        await refreshHistory();
       } catch (error) {
         collapseThinking(assistant);
         if (isMissingJobError(error)) resetJobState();
@@ -1037,11 +1242,21 @@ const helpItems = [
       try {
         await api(`/jobs/${state.jobId}/cleanup`, { method: "POST", headers: authHeaders() });
         resetJobState();
+        await refreshHistory();
         setStatus("当前任务已清理。");
       } catch (error) {
         setStatus(error.message || "清理失败。");
       }
     });
+
+    historyToggle?.addEventListener("click", async () => {
+      if (!requireAuthenticated()) return;
+      await refreshHistory();
+      setHistoryVisible(historyPanel?.hidden);
+    });
+
+    historyClose?.addEventListener("click", () => setHistoryVisible(false));
+    window.addEventListener("pagehide", sendLeaveCleanup);
 
     document.addEventListener("click", () => closeDownloadMenus());
 
