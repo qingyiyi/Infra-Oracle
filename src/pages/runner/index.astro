@@ -141,8 +141,8 @@ const helpItems = [
           </div>
 
           <div class="assistant-input-row">
-            <details class="assistant-menu">
-              <summary aria-label="打开工具菜单">+</summary>
+            <div class="assistant-menu" id="runner-tool-menu">
+              <button type="button" class="assistant-menu-trigger" id="runner-tool-menu-trigger" aria-label="打开工具菜单" aria-expanded="false">+</button>
               <div class="assistant-popover assistant-popover--left assistant-popover--up">
                 <h2>工具</h2>
                 <ul>
@@ -153,16 +153,16 @@ const helpItems = [
                     </li>
                   ))}
                 </ul>
-                <label class="assistant-upload-button" for="runner-file-input">选择文件</label>
+                <button type="button" class="assistant-upload-button" id="runner-file-picker">选择文件</button>
                 <input
                   id="runner-file-input"
                   type="file"
                   multiple
-                  accept=".pdf,.docx,.pptx,.txt,.md,.markdown,.png,.jpg,.jpeg"
+                  accept=".pdf,.docx,.ppt,.pptx,.txt,.md,.markdown,.csv,.json,.png,.jpg,.jpeg"
                 />
                 <button type="button" class="assistant-menu-button" id="runner-cleanup">清理当前任务</button>
               </div>
-            </details>
+            </div>
 
             <label for="runner-message" class="assistant-hidden-label">任务说明</label>
             <textarea
@@ -216,6 +216,9 @@ const helpItems = [
     const filesEl = document.querySelector("#runner-files");
     const messageInput = document.querySelector("#runner-message");
     const sendButton = document.querySelector("#runner-send");
+    const toolMenu = document.querySelector("#runner-tool-menu");
+    const toolMenuTrigger = document.querySelector("#runner-tool-menu-trigger");
+    const filePickerButton = document.querySelector("#runner-file-picker");
     const fileInput = document.querySelector("#runner-file-input");
     const cleanupButton = document.querySelector("#runner-cleanup");
     const toastEl = document.querySelector("#runner-toast");
@@ -231,6 +234,7 @@ const helpItems = [
       heartbeatWarningShown: false,
       lastMessage: "",
       history: [],
+      files: [],
       busy: false,
       authenticated: false,
       leaving: false,
@@ -261,6 +265,8 @@ const helpItems = [
       if (messageInput) messageInput.disabled = !isEnabled;
       if (sendButton) sendButton.disabled = !isEnabled || state.busy;
       if (fileInput) fileInput.disabled = !isEnabled;
+      if (filePickerButton) filePickerButton.disabled = !isEnabled || state.busy;
+      if (toolMenuTrigger) toolMenuTrigger.disabled = !isEnabled || state.busy;
       if (cleanupButton) cleanupButton.disabled = !isEnabled;
       quickPromptButtons.forEach((button) => {
         button.disabled = !isEnabled;
@@ -280,6 +286,84 @@ const helpItems = [
         ...extra,
         authorization: `Bearer ${state.token}`,
       };
+    }
+
+    function formatFileSize(bytes) {
+      const value = Number(bytes || 0);
+      if (value >= 1024 * 1024) return `${(value / 1024 / 1024).toFixed(1)} MB`;
+      if (value >= 1024) return `${Math.max(1, Math.round(value / 1024))} KB`;
+      return `${value} B`;
+    }
+
+    function safeFileLabel(file) {
+      return String(file?.originalName || file?.name || "upload").replace(/[\r\n\t]+/g, " ").slice(0, 80);
+    }
+
+    function isFileExpired(file) {
+      return Boolean(file?.expiresAt && new Date(file.expiresAt).getTime() <= Date.now());
+    }
+
+    function hasActiveImageAttachment() {
+      return state.files.some((file) =>
+        !file.deletedAt &&
+        !isFileExpired(file) &&
+        [".png", ".jpg", ".jpeg"].includes(String(file.ext || "").toLowerCase())
+      );
+    }
+
+    function mentionsWordOutput(message) {
+      return /word|docx|\.docx/i.test(message);
+    }
+
+    function mentionsImageMode(message) {
+      return /带图|包含图片|插入图片|纯文档|不带图|with images|include images|text-only|text only/i.test(message);
+    }
+
+    function setToolMenuOpen(isOpen) {
+      if (!toolMenu || !toolMenuTrigger) return;
+      toolMenu.classList.toggle("assistant-menu--open", isOpen);
+      toolMenuTrigger.setAttribute("aria-expanded", String(isOpen));
+    }
+
+    function renderFiles() {
+      if (!filesEl) return;
+      filesEl.replaceChildren();
+      const visibleFiles = state.files.filter((file) => !file.deletedAt);
+      for (const file of visibleFiles) {
+        const chip = document.createElement("span");
+        chip.className = "assistant-file-chip";
+        const expired = isFileExpired(file);
+        if (file.lockedAt) chip.classList.add("assistant-file-chip--locked");
+        if (expired) chip.classList.add("assistant-file-chip--expired");
+
+        const name = document.createElement("strong");
+        name.textContent = safeFileLabel(file);
+        const meta = document.createElement("em");
+        const status = expired
+          ? "已过期"
+          : file.lockedAt
+            ? "已锁定"
+            : file.unsupportedReason
+              ? "暂不支持"
+              : "已上传";
+        meta.textContent = `${formatFileSize(file.size)} · ${status}`;
+        chip.append(name, meta);
+
+        if (!file.lockedAt && !expired && !state.busy) {
+          const remove = document.createElement("button");
+          remove.type = "button";
+          remove.setAttribute("aria-label", `删除 ${safeFileLabel(file)}`);
+          remove.textContent = "×";
+          remove.addEventListener("click", () => deleteUploadedFile(file.id));
+          chip.append(remove);
+        }
+        filesEl.append(chip);
+      }
+    }
+
+    function setFilesFromJob(job) {
+      state.files = Array.isArray(job?.files) ? job.files.filter((file) => !file.deletedAt) : [];
+      renderFiles();
     }
 
     function appendMessage(role, content = "", options = {}) {
@@ -825,6 +909,8 @@ const helpItems = [
           }
         }
         state.jobId = restored.jobId || "";
+        state.files = Array.isArray(restored.files) ? restored.files.filter((file) => !file.deletedAt) : [];
+        renderFiles();
         if (state.jobId) sessionStorage.setItem("runnerJobId", state.jobId);
         startHeartbeat({ immediate: false });
         setHistoryVisible(false);
@@ -973,7 +1059,8 @@ const helpItems = [
       state.jobId = "";
       state.heartbeatFailures = 0;
       state.heartbeatWarningShown = false;
-      filesEl?.replaceChildren();
+      state.files = [];
+      renderFiles();
     }
 
     async function recreateJob() {
@@ -997,6 +1084,7 @@ const helpItems = [
       const response = await api("/jobs", { method: "POST", headers: authHeaders() });
       const payload = await response.json();
       state.jobId = payload.job.id;
+      setFilesFromJob(payload.job);
       sessionStorage.setItem("runnerJobId", state.jobId);
       startHeartbeat();
       return state.jobId;
@@ -1064,6 +1152,11 @@ const helpItems = [
       }
       setStatus("正在创建任务。");
       await ensureJob();
+      if (state.jobId) {
+        const response = await api(`/jobs/${state.jobId}`, { headers: authHeaders() });
+        const payload = await response.json();
+        setFilesFromJob(payload.job);
+      }
       await ensureHeartbeat({ immediate: true });
       if (!state.jobId) {
         await ensureJob();
@@ -1110,6 +1203,10 @@ const helpItems = [
     async function uploadFiles(files) {
       if (!files?.length) return;
       if (!requireAuthenticated()) return;
+      if (state.busy) {
+        showToast("任务发送后附件已锁定，请等待本轮完成。");
+        return;
+      }
       await ensureJob();
       await ensureHeartbeat({ immediate: true });
       if (!state.jobId) {
@@ -1120,21 +1217,44 @@ const helpItems = [
         const formData = new FormData();
         formData.append("file", file);
         setStatus(`正在上传 ${file.name}`);
-        const response = await api(`/jobs/${state.jobId}/files`, {
-          method: "POST",
-          headers: authHeaders(),
-          body: formData,
-        });
-        const payload = await response.json();
-        const item = document.createElement("span");
-        item.textContent = payload.file.originalName;
-        filesEl.append(item);
+        try {
+          const response = await api(`/jobs/${state.jobId}/files`, {
+            method: "POST",
+            headers: authHeaders(),
+            body: formData,
+          });
+          const payload = await response.json();
+          state.files = [...state.files.filter((item) => item.id !== payload.file.id), payload.file];
+          renderFiles();
+          if (payload.file.unsupportedReason) showToast(payload.file.unsupportedReason);
+        } catch (error) {
+          setStatus(error.message || "文件上传失败。");
+          showToast(error.message || "文件上传失败。");
+        }
       }
       setStatus("文件已上传。");
     }
 
+    async function deleteUploadedFile(fileId) {
+      if (!fileId || state.busy) return;
+      if (!requireAuthenticated()) return;
+      try {
+        await api(`/jobs/${state.jobId}/files/${fileId}`, { method: "DELETE", headers: authHeaders() });
+        state.files = state.files.filter((file) => file.id !== fileId);
+        renderFiles();
+        setStatus("附件已删除。");
+      } catch (error) {
+        showToast(error.message || "删除失败");
+        if (error.code === "file_not_found") {
+          state.files = state.files.filter((file) => file.id !== fileId);
+          renderFiles();
+        }
+      }
+    }
+
     fileInput?.addEventListener("change", async () => {
       try {
+        setToolMenuOpen(false);
         await uploadFiles(fileInput.files);
         fileInput.value = "";
       } catch (error) {
@@ -1160,9 +1280,15 @@ const helpItems = [
     async function sendMessage(message = messageInput.value.trim()) {
       if (!requireAuthenticated()) return;
       if (!message || state.busy) return;
+      if (hasActiveImageAttachment() && mentionsWordOutput(message) && !mentionsImageMode(message)) {
+        const withImages = window.confirm("本轮包含图片。Word 是否需要带图？选择“确定”生成带图 Word，选择“取消”生成纯文档 Word。");
+        message = `${message}${withImages ? " 请生成带图 Word。" : " 请生成纯文档 Word，不要插入图片。"}`;
+      }
       state.busy = true;
       state.lastMessage = message;
       setRunnerInteractive(false);
+      state.files = state.files.map((file) => file.lockedAt ? file : { ...file, lockedAt: new Date().toISOString() });
+      renderFiles();
       appendMessage("user", message);
       messageInput.value = "";
       const assistant = appendMessage("assistant", "", { live: true });
@@ -1279,6 +1405,7 @@ const helpItems = [
         stopTraceCurrentTimer(assistant);
         state.busy = false;
         setRunnerInteractive(state.authenticated);
+        renderFiles();
       }
     }
 
@@ -1311,6 +1438,22 @@ const helpItems = [
       }
     });
 
+    toolMenuTrigger?.addEventListener("click", (event) => {
+      event.stopPropagation();
+      if (toolMenuTrigger.disabled) return;
+      setToolMenuOpen(!toolMenu?.classList.contains("assistant-menu--open"));
+    });
+
+    toolMenu?.addEventListener("click", (event) => {
+      event.stopPropagation();
+    });
+
+    filePickerButton?.addEventListener("click", () => {
+      if (!requireAuthenticated()) return;
+      setToolMenuOpen(false);
+      fileInput?.click();
+    });
+
     historyToggle?.addEventListener("click", async () => {
       if (!requireAuthenticated()) return;
       await refreshHistory();
@@ -1320,7 +1463,10 @@ const helpItems = [
     historyClose?.addEventListener("click", () => setHistoryVisible(false));
     window.addEventListener("pagehide", sendLeaveCleanup);
 
-    document.addEventListener("click", () => closeDownloadMenus());
+    document.addEventListener("click", () => {
+      closeDownloadMenus();
+      setToolMenuOpen(false);
+    });
 
     if (!apiBase) {
       setRunnerInteractive(false);
