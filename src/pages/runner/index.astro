@@ -503,7 +503,7 @@ const helpItems = [
     function updateTraceCurrent(message, trace) {
       message.stageCurrent.innerHTML = "";
       const title = document.createElement("span");
-      title.textContent = trace.label;
+      title.textContent = formatCurrentTraceLabel(trace);
       const status = document.createElement("em");
       status.textContent = traceStatusText(trace.status);
       message.stageCurrent.append(title, status);
@@ -511,6 +511,13 @@ const helpItems = [
         const dots = document.createElement("i");
         message.stageCurrent.append(dots);
       }
+    }
+
+    function formatCurrentTraceLabel(trace) {
+      if (trace.kind === "web" && trace.title && trace.domain) {
+        return `正在检索：${trace.title} · ${trace.domain}`;
+      }
+      return trace.label;
     }
 
     function appendTraceRow(message, traceInput) {
