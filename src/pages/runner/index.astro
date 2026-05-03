@@ -1168,6 +1168,16 @@ const helpItems = [
             if (event === "delta") {
               streamMarkdown(assistant, data.text || "");
             }
+            if (event === "delta_reset") {
+              if (assistant.renderTimer) {
+                window.clearInterval(assistant.renderTimer);
+                assistant.renderTimer = 0;
+              }
+              assistant.targetMarkdown = "";
+              assistant.visibleMarkdown = "";
+              assistant.body.innerHTML = "";
+              updateActionState(assistant);
+            }
             if (event === "status") setStatus(data.status === "retrying" ? "正在自动重试" : "正在处理");
             if (event === "notice") {
               setStatus(data.message || "提示");
