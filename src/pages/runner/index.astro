@@ -304,6 +304,7 @@ const helpItems = [
         stagePanel: null,
         stageCurrent: null,
         stageList: null,
+        traceToggle: null,
         traceRows: [],
         actionBar: null,
         copyButton: null,
@@ -416,23 +417,29 @@ const helpItems = [
     function addThinkingPanel(message) {
       const panel = document.createElement("div");
       panel.className = "assistant-thinking assistant-trace";
-      const header = document.createElement("div");
-      header.className = "assistant-trace__header";
-      const heading = document.createElement("strong");
-      heading.textContent = "运行 trace";
-      const stateLabel = document.createElement("span");
-      stateLabel.textContent = "准备任务";
+      const summary = document.createElement("div");
+      summary.className = "assistant-trace__summary";
+      const toggle = document.createElement("button");
+      toggle.type = "button";
+      toggle.className = "assistant-trace__toggle";
+      toggle.textContent = "trace";
+      toggle.setAttribute("aria-expanded", "false");
+      toggle.addEventListener("click", () => {
+        const expanded = panel.classList.toggle("assistant-trace--expanded");
+        toggle.setAttribute("aria-expanded", String(expanded));
+      });
       const current = document.createElement("div");
       current.className = "assistant-thinking__current assistant-trace__current";
       current.innerHTML = `<span>准备任务</span><i></i>`;
       const list = document.createElement("ul");
       list.className = "assistant-thinking__list assistant-trace__list";
-      header.append(heading, stateLabel);
-      panel.append(header, current, list);
+      summary.append(current, toggle);
+      panel.append(summary, list);
       message.article.insertBefore(panel, message.body);
       message.stagePanel = panel;
       message.stageCurrent = current;
       message.stageList = list;
+      message.traceToggle = toggle;
     }
 
     function normalizeTrace(data = {}) {
@@ -511,7 +518,10 @@ const helpItems = [
       const trace = normalizeTrace(traceInput);
       message.traceRows.push(trace);
       message.stagePanel.hidden = false;
-      message.stagePanel.classList.remove("assistant-thinking--collapsed");
+      if (message.traceRows.length > 80) {
+        message.traceRows.shift();
+        message.stageList?.firstElementChild?.remove();
+      }
       updateTraceCurrent(message, trace);
 
       const item = document.createElement("li");
@@ -568,7 +578,9 @@ const helpItems = [
 
       item.append(meta, main);
       message.stageList.append(item);
-      messagesEl?.scrollTo({ top: messagesEl.scrollHeight });
+      if (message.stagePanel.classList.contains("assistant-trace--expanded")) {
+        messagesEl?.scrollTo({ top: messagesEl.scrollHeight });
+      }
     }
 
     function updateThinking(message, data) {
@@ -584,11 +596,10 @@ const helpItems = [
     function collapseThinking(message) {
       if (!message.stagePanel) return;
       message.stagePanel.classList.add("assistant-thinking--collapsed");
-      message.traceRows.forEach((trace, index) => {
-        const row = message.stageList?.children[index];
-        if (!row || trace.status === "failed") return;
-        if (index < message.traceRows.length - 1) row.classList.add("assistant-trace-row--folded");
-      });
+      if (!message.traceRows.some((trace) => trace.status === "failed")) {
+        message.stagePanel.classList.remove("assistant-trace--expanded");
+        message.traceToggle?.setAttribute("aria-expanded", "false");
+      }
     }
 
     function addMessageActions(message) {
