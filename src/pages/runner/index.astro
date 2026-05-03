@@ -300,6 +300,8 @@ const helpItems = [
         targetMarkdown: content,
         visibleMarkdown: content,
         renderTimer: 0,
+        currentTraceTimer: 0,
+        currentTrace: null,
         artifacts: [],
         stagePanel: null,
         stageCurrent: null,
@@ -457,6 +459,7 @@ const helpItems = [
         domain: data.domain || "",
         url: data.url || "",
         title: data.title || "",
+        searchTopic: data.searchTopic || "",
         summary: data.summary || "",
         path: data.path || "",
         operation: data.operation || "",
@@ -500,7 +503,25 @@ const helpItems = [
       return date.toLocaleTimeString("zh-CN", { hour12: false, hour: "2-digit", minute: "2-digit", second: "2-digit" });
     }
 
+    function stopTraceCurrentTimer(message) {
+      if (message.currentTraceTimer) {
+        window.clearInterval(message.currentTraceTimer);
+        message.currentTraceTimer = 0;
+      }
+    }
+
     function updateTraceCurrent(message, trace) {
+      stopTraceCurrentTimer(message);
+      message.currentTrace = trace;
+      renderTraceCurrent(message, trace);
+      if (trace.kind === "web" && trace.status === "running" && trace.searchTopic) {
+        message.currentTraceTimer = window.setInterval(() => {
+          renderTraceCurrent(message, trace);
+        }, 1000);
+      }
+    }
+
+    function renderTraceCurrent(message, trace) {
       message.stageCurrent.innerHTML = "";
       const title = document.createElement("span");
       title.textContent = formatCurrentTraceLabel(trace);
@@ -514,10 +535,19 @@ const helpItems = [
     }
 
     function formatCurrentTraceLabel(trace) {
+      if (trace.kind === "web" && trace.status === "running" && trace.searchTopic) {
+        return `正在搜索：${trace.searchTopic} · 已等待 ${traceElapsedSeconds(trace.createdAt)}s`;
+      }
       if (trace.kind === "web" && trace.title && trace.domain) {
-        return `正在检索：${trace.title} · ${trace.domain}`;
+        return `正在查看：${trace.title} · ${trace.domain}`;
       }
       return trace.label;
+    }
+
+    function traceElapsedSeconds(value) {
+      const started = new Date(value).getTime();
+      if (Number.isNaN(started)) return 0;
+      return Math.max(0, Math.floor((Date.now() - started) / 1000));
     }
 
     function appendTraceRow(message, traceInput) {
@@ -1212,6 +1242,7 @@ const helpItems = [
               assistant.body.innerHTML = renderMarkdown(messageText);
               updateActionState(assistant);
               setStatus(messageText);
+              stopTraceCurrentTimer(assistant);
               collapseThinking(assistant);
               if (data.error === "job_not_found") resetJobState();
               if (data.canRetry !== false) {
@@ -1226,6 +1257,7 @@ const helpItems = [
             if (event === "done") {
               completed = true;
               setStatus("任务完成。");
+              stopTraceCurrentTimer(assistant);
             }
           });
         }
@@ -1234,6 +1266,7 @@ const helpItems = [
         await refreshBudget();
         await refreshHistory();
       } catch (error) {
+        stopTraceCurrentTimer(assistant);
         collapseThinking(assistant);
         if (isMissingJobError(error)) resetJobState();
         const messageText = error.message || "任务失败，请联系管理员。";
@@ -1243,6 +1276,7 @@ const helpItems = [
         updateActionState(assistant);
         setStatus(messageText);
       } finally {
+        stopTraceCurrentTimer(assistant);
         state.busy = false;
         setRunnerInteractive(state.authenticated);
       }
