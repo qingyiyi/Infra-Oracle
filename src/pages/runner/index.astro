@@ -225,6 +225,7 @@ const helpItems = [
     const quickPromptButtons = document.querySelectorAll("[data-runner-prompt]");
     const HEARTBEAT_INTERVAL_MS = 15000;
     const HEARTBEAT_FAILURE_LIMIT = 4;
+    const CHUNKED_UPLOAD_CONCURRENCY = 3;
 
     const state = {
       token: sessionStorage.getItem("runnerSessionToken") || "",
@@ -782,6 +783,20 @@ const helpItems = [
       }
     }
 
+    function finishTraceCurrent(message, status = "completed") {
+      if (!message.stageCurrent) return;
+      const last = message.currentTrace || message.traceRows.at(-1) || {
+        kind: "lifecycle",
+        label: status === "failed" ? "任务失败" : "任务完成",
+        detail: "",
+      };
+      updateTraceCurrent(message, {
+        ...last,
+        status,
+        label: status === "failed" ? "任务失败" : "任务完成",
+      });
+    }
+
     function renderTraceCurrent(message, trace) {
       message.stageCurrent.innerHTML = "";
       const title = document.createElement("span");
@@ -1299,17 +1314,27 @@ const helpItems = [
       const chunkCount = Math.ceil(file.size / chunkSize);
       const uploadId = `${Date.now()}-${Math.random().toString(16).slice(2)}-${localItem.id}`.replace(/[^a-zA-Z0-9_-]+/g, "-");
       let uploadedBytes = 0;
-      for (let index = 0; index < chunkCount; index += 1) {
-        const start = index * chunkSize;
-        const chunk = file.slice(start, Math.min(file.size, start + chunkSize));
-        await rawUploadRequest(`/jobs/${state.jobId}/file-chunks/${uploadId}/${index}`, chunk, {
-          method: "PUT",
-          contentType: "application/octet-stream",
-          timeout: 180000,
-        });
-        uploadedBytes += chunk.size;
-        onProgress?.(Math.min(99, (uploadedBytes / file.size) * 100));
-      }
+      let nextIndex = 0;
+      const uploadNextChunk = async () => {
+        while (nextIndex < chunkCount) {
+          const index = nextIndex;
+          nextIndex += 1;
+          const start = index * chunkSize;
+          const chunk = file.slice(start, Math.min(file.size, start + chunkSize));
+          await rawUploadRequest(`/jobs/${state.jobId}/file-chunks/${uploadId}/${index}`, chunk, {
+            method: "PUT",
+            contentType: "application/octet-stream",
+            timeout: 180000,
+          });
+          uploadedBytes += chunk.size;
+          onProgress?.(Math.min(99, (uploadedBytes / file.size) * 100));
+        }
+      };
+      const workers = Array.from(
+        { length: Math.min(CHUNKED_UPLOAD_CONCURRENCY, chunkCount) },
+        () => uploadNextChunk(),
+      );
+      await Promise.all(workers);
       const payload = await rawUploadRequest(`/jobs/${state.jobId}/file-chunks/${uploadId}/complete`, JSON.stringify({
         originalName: file.name,
         mime: file.type || "application/octet-stream",
@@ -1739,7 +1764,7 @@ const helpItems = [
               assistant.body.innerHTML = renderMarkdown(messageText);
               updateActionState(assistant);
               setStatus(messageText);
-              stopTraceCurrentTimer(assistant);
+              finishTraceCurrent(assistant, "failed");
               collapseThinking(assistant);
               if (data.error === "job_not_found") resetJobState();
               if (data.canRetry !== false) {
@@ -1754,7 +1779,7 @@ const helpItems = [
             if (event === "done") {
               completed = true;
               setStatus("任务完成。");
-              stopTraceCurrentTimer(assistant);
+              finishTraceCurrent(assistant, "completed");
             }
           });
         }
@@ -1763,7 +1788,7 @@ const helpItems = [
         await refreshBudget();
         await refreshHistory();
       } catch (error) {
-        stopTraceCurrentTimer(assistant);
+        finishTraceCurrent(assistant, "failed");
         collapseThinking(assistant);
         if (isMissingJobError(error)) {
           resetJobState();
