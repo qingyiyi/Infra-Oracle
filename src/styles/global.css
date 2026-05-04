@@ -1056,6 +1056,78 @@ textarea.field__control {
   border-color: rgba(84, 210, 160, 0.22);
 }
 
+.assistant-message-attachments {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.assistant-message-attachment {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 0.55rem;
+  max-width: min(100%, 18rem);
+  margin: 0;
+  padding: 0.45rem 0.55rem;
+  border: 1px solid rgba(84, 210, 160, 0.2);
+  border-radius: var(--radius-sm);
+  background: rgba(0, 0, 0, 0.16);
+}
+
+.assistant-message-attachment img {
+  width: 4.5rem;
+  height: 4.5rem;
+  border-radius: var(--radius-sm);
+  object-fit: cover;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.assistant-message-attachment__icon,
+.assistant-message-attachment__fallback {
+  display: grid;
+  place-items: center;
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: var(--radius-sm);
+  color: var(--color-text-muted);
+  background: rgba(255, 255, 255, 0.06);
+  font-family: var(--font-mono);
+  font-size: var(--text-micro);
+}
+
+.assistant-message-attachment__fallback {
+  width: 4.5rem;
+  height: 4.5rem;
+  text-align: center;
+}
+
+.assistant-message-attachment__caption {
+  display: grid;
+  min-width: 0;
+  gap: 0.12rem;
+}
+
+.assistant-message-attachment__caption strong {
+  overflow: hidden;
+  color: var(--color-text-soft);
+  font-size: var(--text-micro);
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.assistant-message-attachment__caption em {
+  color: var(--color-text-muted);
+  font-size: var(--text-micro);
+  font-style: normal;
+}
+
+.assistant-message-attachment--expired {
+  border-color: rgba(255, 138, 122, 0.22);
+  background: rgba(255, 138, 122, 0.08);
+}
+
 .assistant-thinking {
   display: grid;
   gap: 0;
@@ -1674,6 +1746,21 @@ textarea.field__control {
 .assistant-file-chip--expired {
   border-color: rgba(255, 138, 122, 0.22);
   background: rgba(255, 138, 122, 0.08);
+}
+
+.assistant-file-chip--uploading {
+  border-color: rgba(96, 165, 250, 0.26);
+  background: rgba(96, 165, 250, 0.08);
+}
+
+.assistant-file-chip--failed {
+  border-color: rgba(255, 138, 122, 0.28);
+  background: rgba(255, 138, 122, 0.1);
+}
+
+.assistant-file-chip--unsupported {
+  border-color: rgba(240, 201, 108, 0.28);
+  background: rgba(240, 201, 108, 0.08);
 }
 
 .assistant-quick-row {

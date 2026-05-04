@@ -237,6 +237,7 @@ const helpItems = [
       files: [],
       busy: false,
       authenticated: false,
+      runnerInteractive: false,
       leaving: false,
     };
 
@@ -262,8 +263,13 @@ const helpItems = [
     }
 
     function setRunnerInteractive(isEnabled) {
+      state.runnerInteractive = isEnabled;
+      const waitingForUploads = hasUploadingFiles();
       if (messageInput) messageInput.disabled = !isEnabled;
-      if (sendButton) sendButton.disabled = !isEnabled || state.busy;
+      if (sendButton) {
+        sendButton.disabled = !isEnabled || state.busy || waitingForUploads;
+        sendButton.title = waitingForUploads ? "等待文件上传完成" : "";
+      }
       if (fileInput) fileInput.disabled = !isEnabled;
       if (filePickerButton) filePickerButton.disabled = !isEnabled || state.busy;
       if (toolMenuTrigger) toolMenuTrigger.disabled = !isEnabled || state.busy;
@@ -271,6 +277,10 @@ const helpItems = [
       quickPromptButtons.forEach((button) => {
         button.disabled = !isEnabled;
       });
+    }
+
+    function refreshRunnerControls() {
+      setRunnerInteractive(state.runnerInteractive);
     }
 
     function requireAuthenticated() {
@@ -303,12 +313,32 @@ const helpItems = [
       return Boolean(file?.expiresAt && new Date(file.expiresAt).getTime() <= Date.now());
     }
 
-    function hasActiveImageAttachment() {
-      return state.files.some((file) =>
+    function isLocalUpload(file) {
+      return file?.local === true;
+    }
+
+    function hasUploadingFiles() {
+      return state.files.some((file) => file.uploadStatus === "uploading");
+    }
+
+    function hasFailedFiles() {
+      return state.files.some((file) => file.uploadStatus === "failed");
+    }
+
+    function successfulComposerFiles() {
+      return state.files.filter((file) =>
+        !isLocalUpload(file) &&
         !file.deletedAt &&
-        !isFileExpired(file) &&
-        [".png", ".jpg", ".jpeg"].includes(String(file.ext || "").toLowerCase())
+        !isFileExpired(file)
       );
+    }
+
+    function isImageFileLike(file) {
+      return [".png", ".jpg", ".jpeg"].includes(String(file?.ext || "").toLowerCase());
+    }
+
+    function hasActiveImageAttachment() {
+      return successfulComposerFiles().some((file) => isImageFileLike(file));
     }
 
     function mentionsWordOutput(message) {
@@ -333,23 +363,33 @@ const helpItems = [
         const chip = document.createElement("span");
         chip.className = "assistant-file-chip";
         const expired = isFileExpired(file);
+        const uploading = file.uploadStatus === "uploading";
+        const failed = file.uploadStatus === "failed";
         if (file.lockedAt) chip.classList.add("assistant-file-chip--locked");
         if (expired) chip.classList.add("assistant-file-chip--expired");
+        if (uploading) chip.classList.add("assistant-file-chip--uploading");
+        if (failed) chip.classList.add("assistant-file-chip--failed");
+        if (file.unsupportedReason) chip.classList.add("assistant-file-chip--unsupported");
 
         const name = document.createElement("strong");
         name.textContent = safeFileLabel(file);
         const meta = document.createElement("em");
         const status = expired
           ? "已过期"
-          : file.lockedAt
-            ? "已锁定"
-            : file.unsupportedReason
-              ? "暂不支持"
-              : "已上传";
+          : uploading
+            ? "上传中"
+            : failed
+              ? "上传失败"
+              : file.lockedAt
+                ? "已锁定"
+                : file.unsupportedReason
+                  ? "暂不支持"
+                  : "已上传";
         meta.textContent = `${formatFileSize(file.size)} · ${status}`;
+        if (file.error) chip.title = file.error;
         chip.append(name, meta);
 
-        if (!file.lockedAt && !expired && !state.busy) {
+        if (!uploading && !file.lockedAt && !expired && !state.busy) {
           const remove = document.createElement("button");
           remove.type = "button";
           remove.setAttribute("aria-label", `删除 ${safeFileLabel(file)}`);
@@ -359,11 +399,127 @@ const helpItems = [
         }
         filesEl.append(chip);
       }
+      refreshRunnerControls();
     }
 
-    function setFilesFromJob(job) {
-      state.files = Array.isArray(job?.files) ? job.files.filter((file) => !file.deletedAt) : [];
+    function setFilesFromJob(job, options = {}) {
+      const localFiles = options.keepLocal ? state.files.filter((file) => isLocalUpload(file)) : [];
+      state.files = [
+        ...localFiles,
+        ...(Array.isArray(job?.files)
+        ? job.files.filter((file) => !file.deletedAt && !file.lockedAt && !isFileExpired(file))
+        : []),
+      ];
       renderFiles();
+    }
+
+    function restoreLocalUploadItems(uploadQueue) {
+      const existingIds = new Set(state.files.map((file) => file.id));
+      const missingItems = uploadQueue
+        .map((item) => item.localItem)
+        .filter((item) => !existingIds.has(item.id));
+      if (missingItems.length) state.files.push(...missingItems);
+    }
+
+    function attachmentStatusLabel(attachment) {
+      if (attachment?.deletedAt || isFileExpired(attachment)) return "已过期";
+      if (attachment?.unsupportedReason) return "暂不支持";
+      return "已上传";
+    }
+
+    function previewUrlForAttachment(attachment) {
+      const jobId = attachment?.jobId || state.jobId;
+      if (!jobId || !attachment?.fileId) return "";
+      return `/jobs/${encodeURIComponent(jobId)}/files/${encodeURIComponent(attachment.fileId)}/preview`;
+    }
+
+    async function loadAttachmentPreview(image, attachment, item) {
+      try {
+        const previewPath = previewUrlForAttachment(attachment);
+        if (!previewPath) throw new Error("preview unavailable");
+        const response = await api(previewPath, { headers: authHeaders() });
+        const blob = await response.blob();
+        const objectUrl = URL.createObjectURL(blob);
+        image.addEventListener("load", () => URL.revokeObjectURL(objectUrl), { once: true });
+        image.addEventListener("error", () => URL.revokeObjectURL(objectUrl), { once: true });
+        image.src = objectUrl;
+      } catch {
+        image.removeAttribute("src");
+        item.classList.add("assistant-message-attachment--expired");
+        if (!item.querySelector(".assistant-message-attachment__fallback")) {
+          const fallback = document.createElement("span");
+          fallback.className = "assistant-message-attachment__fallback";
+          fallback.textContent = "无法预览";
+          item.prepend(fallback);
+        }
+      }
+    }
+
+    function renderMessageAttachments(article, attachments = []) {
+      const visible = attachments.filter(Boolean);
+      if (!visible.length) return;
+
+      const wrap = document.createElement("div");
+      wrap.className = "assistant-message-attachments";
+
+      for (const attachment of visible) {
+        const expired = attachment.deletedAt || isFileExpired(attachment);
+        const canPreview = attachment.kind === "image" && !expired;
+        const item = document.createElement(canPreview ? "figure" : "div");
+        item.className = `assistant-message-attachment assistant-message-attachment--${attachment.kind || "document"}`;
+        if (expired) item.classList.add("assistant-message-attachment--expired");
+
+        if (canPreview) {
+          const image = document.createElement("img");
+          image.alt = safeFileLabel(attachment);
+          image.loading = "lazy";
+          image.addEventListener("error", () => {
+            image.remove();
+            item.classList.add("assistant-message-attachment--expired");
+            if (!item.querySelector(".assistant-message-attachment__fallback")) {
+              const fallback = document.createElement("span");
+              fallback.className = "assistant-message-attachment__fallback";
+              fallback.textContent = "无法预览";
+              item.prepend(fallback);
+            }
+          });
+          item.append(image);
+          void loadAttachmentPreview(image, attachment, item);
+        } else {
+          const icon = document.createElement("span");
+          icon.className = "assistant-message-attachment__icon";
+          icon.textContent = attachment.kind === "image" ? "IMG" : "DOC";
+          item.append(icon);
+        }
+
+        const caption = document.createElement("figcaption");
+        caption.className = "assistant-message-attachment__caption";
+        const name = document.createElement("strong");
+        name.textContent = safeFileLabel(attachment);
+        const meta = document.createElement("em");
+        meta.textContent = `${formatFileSize(attachment.size)} · ${attachmentStatusLabel(attachment)}`;
+        caption.append(name, meta);
+        item.append(caption);
+        wrap.append(item);
+      }
+
+      article.append(wrap);
+    }
+
+    function snapshotAttachmentsFromComposer() {
+      return successfulComposerFiles().map((file) => ({
+        id: `snapshot-${file.id}`,
+        fileId: file.id,
+        kind: file.unsupportedReason ? "unsupported" : isImageFileLike(file) ? "image" : "document",
+        originalName: file.originalName,
+        ext: file.ext,
+        mime: file.mime,
+        size: file.size,
+        createdAt: file.createdAt,
+        expiresAt: file.expiresAt,
+        unsupportedReason: file.unsupportedReason,
+        jobId: state.jobId,
+      }));
     }
 
     function appendMessage(role, content = "", options = {}) {
@@ -402,6 +558,10 @@ const helpItems = [
       if (role === "assistant" && options.live) {
         addThinkingPanel(message);
         addMessageActions(message);
+      }
+
+      if (role === "user") {
+        renderMessageAttachments(article, options.attachments || []);
       }
 
       messagesEl?.append(article);
@@ -897,21 +1057,21 @@ const helpItems = [
         const response = await api(`/history/${historyId}`, { headers: authHeaders() });
         const payload = await response.json();
         const restored = payload.session;
+        state.jobId = restored.jobId || "";
+        if (state.jobId) sessionStorage.setItem("runnerJobId", state.jobId);
         messagesEl?.replaceChildren();
         for (const msg of restored.messages || []) {
           if (msg.role === "system") continue;
           const live = msg.role === "assistant";
-          const rendered = appendMessage(msg.role, msg.content || "", { live });
+          const rendered = appendMessage(msg.role, msg.content || "", { live, attachments: msg.attachments || [] });
           if (live) {
             rendered.artifacts = restored.artifacts || [];
             if (restored.traces?.length) renderRestoredTrace(rendered, restored.traces);
             updateActionState(rendered);
           }
         }
-        state.jobId = restored.jobId || "";
-        state.files = Array.isArray(restored.files) ? restored.files.filter((file) => !file.deletedAt) : [];
+        state.files = [];
         renderFiles();
-        if (state.jobId) sessionStorage.setItem("runnerJobId", state.jobId);
         startHeartbeat({ immediate: false });
         setHistoryVisible(false);
         setStatus("历史会话已恢复。");
@@ -1063,6 +1223,13 @@ const helpItems = [
       renderFiles();
     }
 
+    async function refreshComposerFilesFromJob() {
+      if (!state.jobId || !state.token) return;
+      const response = await api(`/jobs/${state.jobId}`, { headers: authHeaders() });
+      const payload = await response.json();
+      setFilesFromJob(payload.job);
+    }
+
     async function recreateJob() {
       resetJobState();
       return ensureJob();
@@ -1084,7 +1251,7 @@ const helpItems = [
       const response = await api("/jobs", { method: "POST", headers: authHeaders() });
       const payload = await response.json();
       state.jobId = payload.job.id;
-      setFilesFromJob(payload.job);
+      setFilesFromJob(payload.job, { keepLocal: true });
       sessionStorage.setItem("runnerJobId", state.jobId);
       startHeartbeat();
       return state.jobId;
@@ -1207,13 +1374,48 @@ const helpItems = [
         showToast("任务发送后附件已锁定，请等待本轮完成。");
         return;
       }
-      await ensureJob();
-      await ensureHeartbeat({ immediate: true });
-      if (!state.jobId) {
+      const selectedFiles = Array.from(files);
+      const uploadQueue = selectedFiles.map((file) => {
+        const localId = `local-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+        const ext = file.name.includes(".") ? `.${file.name.split(".").pop().toLowerCase()}` : "";
+        return {
+          file,
+          localItem: {
+            id: localId,
+            local: true,
+            originalName: file.name,
+            name: file.name,
+            ext,
+            mime: file.type || "application/octet-stream",
+            size: file.size,
+            uploadStatus: "uploading",
+          },
+        };
+      });
+      state.files.push(...uploadQueue.map((item) => item.localItem));
+      renderFiles();
+      try {
         await ensureJob();
         await ensureHeartbeat({ immediate: true });
+        if (!state.jobId) {
+          await ensureJob();
+          await ensureHeartbeat({ immediate: true });
+        }
+        restoreLocalUploadItems(uploadQueue);
+        renderFiles();
+      } catch (error) {
+        restoreLocalUploadItems(uploadQueue);
+        state.files = state.files.map((item) =>
+          uploadQueue.some((queued) => queued.localItem.id === item.id)
+            ? { ...item, uploadStatus: "failed", error: error.message || "文件上传失败。" }
+            : item
+        );
+        renderFiles();
+        setStatus(error.message || "文件上传失败。");
+        showToast(error.message || "文件上传失败。");
+        return;
       }
-      for (const file of files) {
+      for (const { file, localItem } of uploadQueue) {
         const formData = new FormData();
         formData.append("file", file);
         setStatus(`正在上传 ${file.name}`);
@@ -1224,20 +1426,45 @@ const helpItems = [
             body: formData,
           });
           const payload = await response.json();
-          state.files = [...state.files.filter((item) => item.id !== payload.file.id), payload.file];
+          if (state.busy) {
+            await api(`/jobs/${state.jobId}/files/${payload.file.id}`, { method: "DELETE", headers: authHeaders() }).catch(() => undefined);
+            state.files = state.files.filter((item) => item.id !== localItem.id);
+            renderFiles();
+            continue;
+          }
+          state.files = state.files.map((item) => item.id === localItem.id ? payload.file : item);
           renderFiles();
           if (payload.file.unsupportedReason) showToast(payload.file.unsupportedReason);
         } catch (error) {
+          state.files = state.files.map((item) => item.id === localItem.id
+            ? { ...item, uploadStatus: "failed", error: error.message || "文件上传失败。" }
+            : item
+          );
+          renderFiles();
           setStatus(error.message || "文件上传失败。");
           showToast(error.message || "文件上传失败。");
         }
       }
-      setStatus("文件已上传。");
+      if (hasUploadingFiles()) {
+        setStatus("等待文件上传完成。");
+      } else if (hasFailedFiles()) {
+        setStatus("部分文件上传失败，请删除失败项后重试。");
+      } else {
+        setStatus("文件已上传。");
+      }
     }
 
     async function deleteUploadedFile(fileId) {
       if (!fileId || state.busy) return;
       if (!requireAuthenticated()) return;
+      const local = state.files.find((file) => file.id === fileId && isLocalUpload(file));
+      if (local) {
+        if (local.uploadStatus === "uploading") return;
+        state.files = state.files.filter((file) => file.id !== fileId);
+        renderFiles();
+        setStatus("附件已删除。");
+        return;
+      }
       try {
         await api(`/jobs/${state.jobId}/files/${fileId}`, { method: "DELETE", headers: authHeaders() });
         state.files = state.files.filter((file) => file.id !== fileId);
@@ -1279,21 +1506,35 @@ const helpItems = [
 
     async function sendMessage(message = messageInput.value.trim()) {
       if (!requireAuthenticated()) return;
-      if (!message || state.busy) return;
+      if (hasUploadingFiles()) {
+        setStatus("等待文件上传完成。");
+        showToast("等待文件上传完成");
+        refreshRunnerControls();
+        return;
+      }
+      if (state.busy) return;
+      if (!message && successfulComposerFiles().length) {
+        setStatus("请先输入任务内容。");
+        showToast("请先输入任务内容");
+        return;
+      }
+      if (!message) return;
       if (hasActiveImageAttachment() && mentionsWordOutput(message) && !mentionsImageMode(message)) {
         const withImages = window.confirm("本轮包含图片。Word 是否需要带图？选择“确定”生成带图 Word，选择“取消”生成纯文档 Word。");
         message = `${message}${withImages ? " 请生成带图 Word。" : " 请生成纯文档 Word，不要插入图片。"}`;
       }
+      const attachmentSnapshot = snapshotAttachmentsFromComposer();
       state.busy = true;
       state.lastMessage = message;
       setRunnerInteractive(false);
-      state.files = state.files.map((file) => file.lockedAt ? file : { ...file, lockedAt: new Date().toISOString() });
+      state.files = [];
       renderFiles();
-      appendMessage("user", message);
+      appendMessage("user", message, { attachments: attachmentSnapshot });
       messageInput.value = "";
       const assistant = appendMessage("assistant", "", { live: true });
       updateThinking(assistant, { label: "准备任务", detail: "正在创建本次对话任务。" });
       setStatus("正在准备任务。");
+      let messageAccepted = false;
 
       try {
         await ensureJob();
@@ -1307,8 +1548,13 @@ const helpItems = [
             headers: authHeaders({ "content-type": "application/json" }),
             body: JSON.stringify({ message }),
           });
+          messageAccepted = true;
         } catch (error) {
           if (!isMissingJobError(error)) throw error;
+          if (attachmentSnapshot.length) {
+            resetJobState();
+            throw new Error("当前任务记录已清理，上传附件已失效，请重新上传后再发送。");
+          }
           setStatus("当前任务记录已被清理，正在创建新任务。");
           updateThinking(assistant, { label: "重新创建任务", detail: "旧任务记录已清理，正在创建新的后端任务。" });
           await recreateJob();
@@ -1318,6 +1564,7 @@ const helpItems = [
             headers: authHeaders({ "content-type": "application/json" }),
             body: JSON.stringify({ message }),
           });
+          messageAccepted = true;
         }
         if (!response.body) throw new Error("浏览器无法读取流式响应。");
         const reader = response.body.getReader();
@@ -1394,7 +1641,11 @@ const helpItems = [
       } catch (error) {
         stopTraceCurrentTimer(assistant);
         collapseThinking(assistant);
-        if (isMissingJobError(error)) resetJobState();
+        if (isMissingJobError(error)) {
+          resetJobState();
+        } else if (!messageAccepted && attachmentSnapshot.length) {
+          await refreshComposerFilesFromJob().catch(() => undefined);
+        }
         const messageText = error.message || "任务失败，请联系管理员。";
         assistant.targetMarkdown = messageText;
         assistant.visibleMarkdown = messageText;
