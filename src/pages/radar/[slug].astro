@@ -9,6 +9,10 @@ import {
   formatRadarDate,
   getPublishedRadarEntries,
   getRadarIssuePath,
+  getRadarItemImage,
+  getRadarWeekRange,
+  radarCategoryLabels,
+  radarSourceTypeLabels,
   type RadarEntry,
 } from "../../lib/radar";
 import { siteRoutes, withBase } from "../../lib/routes";
@@ -29,6 +33,7 @@ interface Props {
 const { entry } = Astro.props as Props;
 const { Content } = await entry.render();
 const reviewedDate = entry.data.reviewed_at ? formatRadarDate(entry.data.reviewed_at) : null;
+const weekRange = getRadarWeekRange(entry);
 ---
 
 <BaseLayout
@@ -41,6 +46,7 @@ const reviewedDate = entry.data.reviewed_at ? formatRadarDate(entry.data.reviewe
       <div class="cluster">
         <Badge tone="accent">{entry.data.week_label}</Badge>
         <Badge tone="success">{entry.data.editorial_status}</Badge>
+        <Badge>{weekRange}</Badge>
         <Badge>{formatRadarDate(entry.data.published_at)}</Badge>
       </div>
       <div class="stack">
@@ -127,24 +133,55 @@ const reviewedDate = entry.data.reviewed_at ? formatRadarDate(entry.data.reviewe
       {entry.data.items.map((item) => (
         <Panel as="article" padding="lg" class="issue-card">
           <div class="callout-row">
-            <Badge tone="accent">{item.category}</Badge>
-            <Badge>{item.source_type}</Badge>
+            <Badge tone="accent">{radarCategoryLabels[item.category]}</Badge>
+            <Badge>{radarSourceTypeLabels[item.source_type]}</Badge>
             <Badge tone={item.credibility === "high" ? "success" : item.credibility === "medium" ? "warning" : "danger"}>
               credibility: {item.credibility}
             </Badge>
           </div>
-          <div class="stack">
-            <h3 class="title-3">{item.title}</h3>
-            <div class="issue-card__meta">
-              <span>{item.source_name}</span>
-              <span>{formatRadarDate(item.published_at)}</span>
+          <div class="radar-item-layout">
+            <div class="radar-item-media" aria-label={getRadarItemImage(item).alt}>
+              {getRadarItemImage(item).url ? (
+                <img src={getRadarItemImage(item).url ?? ""} alt={getRadarItemImage(item).alt} loading="lazy" />
+              ) : (
+                <span>{radarCategoryLabels[item.category]}</span>
+              )}
             </div>
-            <p class="body-md">{item.summary}</p>
+            <div class="stack">
+              <h3 class="title-3">{item.title}</h3>
+              <div class="issue-card__meta">
+                <span>{item.source_name}</span>
+                <span>{formatRadarDate(item.published_at)}</span>
+              </div>
+              <p class="body-md">{item.summary}</p>
+            </div>
           </div>
-          <Panel tone="subtle">
-            <p class="mono-label">Why it matters</p>
-            <p class="body-sm">{item.why_it_matters}</p>
-          </Panel>
+          <div class="analysis-grid">
+            <Panel tone="subtle">
+              <p class="mono-label">Background</p>
+              <p class="body-sm">{item.background ?? item.summary}</p>
+            </Panel>
+            <Panel tone="subtle">
+              <p class="mono-label">Details</p>
+              <p class="body-sm">{item.details ?? item.why_it_matters}</p>
+            </Panel>
+            <Panel tone="subtle">
+              <p class="mono-label">Impact</p>
+              <p class="body-sm">{item.impact ?? item.why_it_matters}</p>
+            </Panel>
+            <Panel tone="subtle">
+              <p class="mono-label">Watch Points</p>
+              {item.watch_points.length > 0 ? (
+                <ul class="compact-list">
+                  {item.watch_points.map((point) => (
+                    <li>{point}</li>
+                  ))}
+                </ul>
+              ) : (
+                <p class="body-sm">继续关注后续官方更新、工程验证和生态迁移成本。</p>
+              )}
+            </Panel>
+          </div>
           <div class="cluster">
             {item.tags.map((tag) => (
               <Badge>{tag}</Badge>
@@ -162,6 +199,11 @@ const reviewedDate = entry.data.reviewed_at ? formatRadarDate(entry.data.reviewe
             <span class="caption">review: {item.review_status}</span>
             <span class="caption">importance: {item.importance}</span>
           </div>
+          {item.image_source_url && (
+            <p class="caption">
+              Image source: <a href={item.image_source_url} target="_blank" rel="noreferrer" class="source-link">official / licensed source</a>
+            </p>
+          )}
           {item.review_notes && (
             <p class="caption">Review note: {item.review_notes}</p>
           )}

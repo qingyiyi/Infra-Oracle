@@ -11,10 +11,15 @@
     "start": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
-    "check": "astro check"
+    "check": "astro check",
+    "radar:generate": "bash scripts/radar-weekly.sh generate",
+    "radar:preview": "bash scripts/radar-weekly.sh preview",
+    "radar:publish": "bash scripts/radar-weekly.sh publish",
+    "radar:full": "bash scripts/radar-weekly.sh full"
   },
   "dependencies": {
     "astro": "^5.16.0",
+    "js-yaml": "^4.1.1",
     "typescript": "^5.9.3"
   },
   "devDependencies": {

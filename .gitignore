@@ -17,6 +17,14 @@
 !public/
 !public/**
 
+# Public editorial helper scripts.
+!scripts/
+!scripts/radar-weekly.sh
+!scripts/radar-weekly-generate.mjs
+!scripts/radar-weekly-preview.mjs
+!scripts/radar-weekly-publish.mjs
+!scripts/radar-weekly-utils.mjs
+
 # GitHub Pages workflow only.
 !.github/
 !.github/workflows/

@@ -22,21 +22,36 @@ Infra-Oracle 是一个基于 Astro 的 static-first 技术展示站，面向 AI 
 
 ### 1. Weekly AI Infra Radar
 
-一个围绕 AI Infra / LLM / HPC 的精选周报模块，当前阶段以静态内容展示为主，并已具备“最新一期 + 归档 + 单期详情”的公开阅读路径。
+一个围绕 AI Infra / LLM / HPC 的精选周报模块，当前已经从展示原型升级为人工审查后的真实周报阅读面，并具备“首页最新一期 + 归档 + 单期详情”的公开路径。
 
 重点关注：
 
-- LLM 模型发布与能力变化
-- AI Infra / 推理系统更新
+- AI 大厂模型、产品和 agent 平台发布
+- AI Infra / 推理系统 / 数据中心更新
 - HPC、GPU 相关动态
-- 对推理速度、成本、KV cache、并行策略有影响的方法与论文
+- NVIDIA、CUDA、推理栈和算力供应链
+- 国内 AI 模型与平台动态
+- 对 AI 基础设施有直接影响的少量国际局势和供应链事件
 - vLLM、SGLang、TensorRT-LLM、Triton、FlashAttention 等工具更新
 
 当前边界：
 
-- 自动采集只能作为候选来源
+- 每周一整理上一完整周，即上周一到上周日；当前已初始化 `2026 W17` 与 `2026 W18`
+- SDK 联网脚本只能生成固定草稿 `src/content/radar/weekly-ai-infra-radar-draft.md`
+- `preview` 用于检查结构、时间窗、栏目比例和来源字段
+- `publish` 需要人工把条目标为 `approved` 后才会写入正式 issue，默认拒绝覆盖已有期号
 - 最终发布必须保留人工审查入口
-- 当前公开版本优先验证内容结构、页面组织、GitHub Pages 部署链路，以及候选内容与已发布 issue 的分离边界
+- 当前公开版本优先验证内容结构、深分析阅读方式、GitHub Pages 部署链路，以及候选内容与已发布 issue 的分离边界
+
+维护命令：
+
+```bash
+npm run radar:full
+npm run radar:preview
+npm run radar:publish
+```
+
+这些命令不负责无人审核自动发布；`radar:full` 默认只生成候选并预览。
 
 ### 2. Web Codex Runner
 

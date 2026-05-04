@@ -8,12 +8,16 @@ import {
   formatRadarDate,
   getPublishedRadarEntries,
   getRadarIssuePath,
+  getRadarHighlights,
+  getRadarWeekRange,
 } from "../../lib/radar";
 import { siteRoutes, withBase } from "../../lib/routes";
 
 const radarEntries = await getPublishedRadarEntries();
 const latestRadar = radarEntries[0];
 const latestDate = latestRadar ? formatRadarDate(latestRadar.data.published_at) : null;
+const latestHighlights = latestRadar ? getRadarHighlights(latestRadar, 5) : [];
+const latestWeekRange = latestRadar ? getRadarWeekRange(latestRadar) : null;
 ---
 
 <BaseLayout
@@ -77,6 +81,7 @@ const latestDate = latestRadar ? formatRadarDate(latestRadar.data.published_at) 
       <Panel as="article" padding="lg">
         <div class="callout-row">
           <Badge tone="accent">{latestRadar ? latestRadar.data.week_label : "draft"}</Badge>
+          {latestWeekRange && <Badge>{latestWeekRange}</Badge>}
           {latestRadar && <Badge>{latestRadar.data.editorial_status}</Badge>}
         </div>
         <p class="body-md">
@@ -99,6 +104,16 @@ const latestDate = latestRadar ? formatRadarDate(latestRadar.data.published_at) 
               : "当前尚未发布新的期号内容。"}
           </p>
         </Panel>
+        {latestHighlights.length > 0 && (
+          <ul class="radar-key-list">
+            {latestHighlights.map((item) => (
+              <li>
+                <span>{item.category}</span>
+                <p>{item.title}</p>
+              </li>
+            ))}
+          </ul>
+        )}
         {latestRadar && (
           <div class="action-row">
             <Button href={getRadarIssuePath(latestRadar.slug)} variant="primary">进入当前期号</Button>
@@ -142,6 +157,7 @@ const latestDate = latestRadar ? formatRadarDate(latestRadar.data.published_at) 
           </div>
           <h3 class="title-3">{entry.data.title}</h3>
           <p class="body-sm">{entry.data.summary}</p>
+          <p class="caption">{getRadarWeekRange(entry)}</p>
           <div class="cluster">
             {entry.data.topics.map((topic) => (
               <Badge>{topic}</Badge>

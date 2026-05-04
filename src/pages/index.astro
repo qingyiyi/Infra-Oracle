@@ -4,13 +4,22 @@ import Badge from "../components/ui/Badge.astro";
 import Button from "../components/ui/Button.astro";
 import Panel from "../components/ui/Panel.astro";
 import SectionHeader from "../components/ui/SectionHeader.astro";
-import { formatRadarDate, getPublishedRadarEntries, getRadarIssuePath } from "../lib/radar";
+import {
+  formatRadarDate,
+  getPublishedRadarEntries,
+  getRadarHighlights,
+  getRadarIssuePath,
+  getRadarWeekRange,
+  radarCategoryLabels,
+} from "../lib/radar";
 import { siteRoutes, withBase } from "../lib/routes";
 
 const radarEntries = await getPublishedRadarEntries();
 const latestRadar = radarEntries[0];
 const latestRadarDate = latestRadar ? formatRadarDate(latestRadar.data.published_at) : null;
 const latestRadarRoute = latestRadar ? getRadarIssuePath(latestRadar.slug) : withBase(siteRoutes.radar);
+const latestRadarHighlights = latestRadar ? getRadarHighlights(latestRadar, 5) : [];
+const latestRadarRange = latestRadar ? getRadarWeekRange(latestRadar) : null;
 
 const modulePreviewCards = [
   {
@@ -193,6 +202,7 @@ const futureExperiments = [
           <div class="callout-row">
             <Badge tone="accent">Latest Radar</Badge>
             {latestRadarDate && <Badge>{latestRadarDate}</Badge>}
+            {latestRadarRange && <Badge>{latestRadarRange}</Badge>}
           </div>
         <h3 class="title-2">{latestRadar ? latestRadar.data.title : "Weekly AI Infra Radar"}</h3>
         <p class="body-md">
@@ -208,6 +218,29 @@ const futureExperiments = [
               : "人工筛选和审查入口仍然保留，不做无人审核自动发布。"}
           </p>
         </Panel>
+        {latestRadarHighlights.length > 0 && (
+          <div class="radar-highlight-list">
+            {latestRadarHighlights.map((item) => (
+              <article class="radar-highlight-card">
+                <div class="radar-thumb" aria-label={item.image_alt ?? item.title}>
+                  {item.image_url ? (
+                    <img src={item.image_url} alt={item.image_alt ?? item.title} loading="lazy" />
+                  ) : (
+                    <span>{radarCategoryLabels[item.category]}</span>
+                  )}
+                </div>
+                <div class="stack">
+                  <div class="callout-row">
+                    <Badge tone="accent">{radarCategoryLabels[item.category]}</Badge>
+                    <Badge>{item.importance}</Badge>
+                  </div>
+                  <h4 class="title-3">{item.title}</h4>
+                  <p class="body-sm">{item.impact ?? item.why_it_matters}</p>
+                </div>
+              </article>
+            ))}
+          </div>
+        )}
         <div class="action-row">
           <Button href={latestRadarRoute} variant="secondary">进入本期</Button>
           <Button href={withBase(siteRoutes.radar)} variant="ghost">查看归档</Button>
