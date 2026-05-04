@@ -305,6 +305,17 @@ const helpItems = [
       return `${value} B`;
     }
 
+    const CHUNKED_UPLOAD_THRESHOLD = 2 * 1024 * 1024;
+    const CHUNKED_UPLOAD_SIZE = 512 * 1024;
+
+    function formatUploadProgress(file) {
+      if (typeof file.uploadProgress === "number") {
+        const prefix = file.uploadMode === "chunked" ? "分片上传 " : "";
+        return `${prefix}${Math.max(0, Math.min(100, Math.round(file.uploadProgress)))}%`;
+      }
+      return "上传中";
+    }
+
     function safeFileLabel(file) {
       return String(file?.originalName || file?.name || "upload").replace(/[\r\n\t]+/g, " ").slice(0, 80);
     }
@@ -377,7 +388,7 @@ const helpItems = [
         const status = expired
           ? "已过期"
           : uploading
-            ? "上传中"
+            ? formatUploadProgress(file)
             : failed
               ? "上传失败"
               : file.lockedAt
@@ -388,6 +399,12 @@ const helpItems = [
         meta.textContent = `${formatFileSize(file.size)} · ${status}`;
         if (file.error) chip.title = file.error;
         chip.append(name, meta);
+        if (uploading) {
+          const progress = document.createElement("span");
+          progress.className = "assistant-file-chip__progress";
+          progress.style.setProperty("--upload-progress", `${Math.max(4, Math.min(100, Number(file.uploadProgress || 0)))}%`);
+          chip.append(progress);
+        }
 
         if (!uploading && !file.lockedAt && !expired && !state.busy) {
           const remove = document.createElement("button");
@@ -1209,6 +1226,104 @@ const helpItems = [
       return response;
     }
 
+    function uploadFileRequest(path, formData, onProgress) {
+      if (!apiBase) return Promise.reject(new Error("Runner API 未配置。请检查 PUBLIC_RUNNER_API_BASE 构建变量。"));
+      return new Promise((resolve, reject) => {
+        const request = new XMLHttpRequest();
+        request.open("POST", runnerApiUrl(path));
+        request.setRequestHeader("authorization", `Bearer ${state.token}`);
+        request.upload.addEventListener("progress", (event) => {
+          if (!event.lengthComputable) return;
+          onProgress?.(Math.min(99, (event.loaded / event.total) * 100));
+        });
+        request.addEventListener("load", () => {
+          const payload = (() => {
+            try {
+              return request.responseText ? JSON.parse(request.responseText) : {};
+            } catch {
+              return {};
+            }
+          })();
+          if (request.status >= 200 && request.status < 300) {
+            onProgress?.(100);
+            resolve(payload);
+            return;
+          }
+          const error = new Error(payload.message || `请求失败：${request.status}`);
+          error.status = request.status;
+          error.code = payload.error || "";
+          reject(error);
+        });
+        request.addEventListener("error", () => reject(new Error("文件上传失败，请检查网络后重试。")));
+        request.addEventListener("timeout", () => reject(new Error("文件上传超时，请删除失败项后重试。")));
+        request.addEventListener("abort", () => reject(new Error("文件上传已取消。")));
+        request.timeout = 180000;
+        request.send(formData);
+      });
+    }
+
+    function rawUploadRequest(path, body, options = {}) {
+      if (!apiBase) return Promise.reject(new Error("Runner API 未配置。请检查 PUBLIC_RUNNER_API_BASE 构建变量。"));
+      return new Promise((resolve, reject) => {
+        const request = new XMLHttpRequest();
+        request.open(options.method || "POST", runnerApiUrl(path));
+        request.setRequestHeader("authorization", `Bearer ${state.token}`);
+        if (options.contentType) request.setRequestHeader("content-type", options.contentType);
+        request.addEventListener("load", () => {
+          const payload = (() => {
+            try {
+              return request.responseText ? JSON.parse(request.responseText) : {};
+            } catch {
+              return {};
+            }
+          })();
+          if (request.status >= 200 && request.status < 300) {
+            resolve(payload);
+            return;
+          }
+          const error = new Error(payload.message || `请求失败：${request.status}`);
+          error.status = request.status;
+          error.code = payload.error || "";
+          reject(error);
+        });
+        request.addEventListener("error", () => reject(new Error("文件上传失败，请检查网络后重试。")));
+        request.addEventListener("timeout", () => reject(new Error("文件上传超时，请删除失败项后重试。")));
+        request.addEventListener("abort", () => reject(new Error("文件上传已取消。")));
+        request.timeout = options.timeout || 60000;
+        request.send(body);
+      });
+    }
+
+    async function uploadFileInChunks(file, localItem, onProgress) {
+      const chunkSize = CHUNKED_UPLOAD_SIZE;
+      const chunkCount = Math.ceil(file.size / chunkSize);
+      const uploadId = `${Date.now()}-${Math.random().toString(16).slice(2)}-${localItem.id}`.replace(/[^a-zA-Z0-9_-]+/g, "-");
+      let uploadedBytes = 0;
+      for (let index = 0; index < chunkCount; index += 1) {
+        const start = index * chunkSize;
+        const chunk = file.slice(start, Math.min(file.size, start + chunkSize));
+        await rawUploadRequest(`/jobs/${state.jobId}/file-chunks/${uploadId}/${index}`, chunk, {
+          method: "PUT",
+          contentType: "application/octet-stream",
+          timeout: 180000,
+        });
+        uploadedBytes += chunk.size;
+        onProgress?.(Math.min(99, (uploadedBytes / file.size) * 100));
+      }
+      const payload = await rawUploadRequest(`/jobs/${state.jobId}/file-chunks/${uploadId}/complete`, JSON.stringify({
+        originalName: file.name,
+        mime: file.type || "application/octet-stream",
+        size: file.size,
+        chunks: chunkCount,
+      }), {
+        method: "POST",
+        contentType: "application/json",
+        timeout: 120000,
+      });
+      onProgress?.(100);
+      return payload;
+    }
+
     function isMissingJobError(error) {
       return error?.status === 404 && error?.code === "job_not_found";
     }
@@ -1389,6 +1504,8 @@ const helpItems = [
             mime: file.type || "application/octet-stream",
             size: file.size,
             uploadStatus: "uploading",
+            uploadMode: file.size > CHUNKED_UPLOAD_THRESHOLD ? "chunked" : "single",
+            uploadProgress: 0,
           },
         };
       });
@@ -1416,16 +1533,23 @@ const helpItems = [
         return;
       }
       for (const { file, localItem } of uploadQueue) {
+        const usesChunkedUpload = file.size > CHUNKED_UPLOAD_THRESHOLD;
+        const uploadLabel = usesChunkedUpload ? "正在分片上传" : "正在上传";
         const formData = new FormData();
         formData.append("file", file);
-        setStatus(`正在上传 ${file.name}`);
+        setStatus(`${uploadLabel} ${file.name}`);
         try {
-          const response = await api(`/jobs/${state.jobId}/files`, {
-            method: "POST",
-            headers: authHeaders(),
-            body: formData,
-          });
-          const payload = await response.json();
+          const onProgress = (progress) => {
+            state.files = state.files.map((item) => item.id === localItem.id
+              ? { ...item, uploadProgress: progress }
+              : item
+            );
+            renderFiles();
+            setStatus(`${uploadLabel} ${file.name} ${Math.round(progress)}%`);
+          };
+          const payload = usesChunkedUpload
+            ? await uploadFileInChunks(file, localItem, onProgress)
+            : await uploadFileRequest(`/jobs/${state.jobId}/files`, formData, onProgress);
           if (state.busy) {
             await api(`/jobs/${state.jobId}/files/${payload.file.id}`, { method: "DELETE", headers: authHeaders() }).catch(() => undefined);
             state.files = state.files.filter((item) => item.id !== localItem.id);
