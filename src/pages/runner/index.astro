@@ -321,6 +321,7 @@ const helpItems = [
 
     function shouldRetryUploadInChunks(error, file) {
       if (!file || file.size < CHUNKED_UPLOAD_FALLBACK_MIN_SIZE || file.size > SINGLE_UPLOAD_FAST_PATH_LIMIT) return false;
+      if (error?.code === "upload_failed") return true;
       if (error?.status && error.status >= 400 && error.status < 500) return false;
       return true;
     }
