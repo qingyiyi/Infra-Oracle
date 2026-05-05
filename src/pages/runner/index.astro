@@ -1438,6 +1438,22 @@ const helpItems = [
       setFilesFromJob(payload.job);
     }
 
+    async function validateCurrentJob() {
+      if (!state.jobId || !state.token) return false;
+      try {
+        const response = await api(`/jobs/${state.jobId}`, { headers: authHeaders() });
+        const payload = await response.json();
+        setFilesFromJob(payload.job);
+        return true;
+      } catch (error) {
+        if (isMissingJobError(error)) {
+          resetJobState();
+          return false;
+        }
+        throw error;
+      }
+    }
+
     async function recreateJob() {
       resetJobState();
       return ensureJob();
@@ -1525,12 +1541,16 @@ const helpItems = [
         setRunnerInteractive(false);
         return;
       }
-      setStatus("正在创建任务。");
-      await ensureJob();
-      if (state.jobId) {
-        const response = await api(`/jobs/${state.jobId}`, { headers: authHeaders() });
-        const payload = await response.json();
-        setFilesFromJob(payload.job);
+      setStatus("正在连接 Runner。");
+      const hadStoredJob = Boolean(state.jobId);
+      const hasValidStoredJob = await validateCurrentJob();
+      if (!hasValidStoredJob) {
+        if (hadStoredJob) {
+          setStatus("旧任务记录已过期，正在创建新任务。");
+        } else {
+          setStatus("正在创建任务。");
+        }
+        await ensureJob();
       }
       await ensureHeartbeat({ immediate: true });
       if (!state.jobId) {
