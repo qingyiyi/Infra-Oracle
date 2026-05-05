@@ -285,9 +285,13 @@ select {
 }
 
 .home-hero-title {
-  max-width: 17ch;
-  font-size: clamp(2.45rem, 5.2vw, 4.15rem);
+  max-width: 18ch;
+  font-size: clamp(2.25rem, 4.55vw, 3.55rem);
   line-height: 1.04;
+}
+
+.home-hero-title span {
+  white-space: nowrap;
 }
 
 .home-balanced-title {
@@ -3148,6 +3152,10 @@ textarea.field__control {
   .home-split-title span:last-child {
     justify-self: start;
     text-align: left;
+  }
+
+  .home-hero-title span {
+    white-space: normal;
   }
 
   .planner-widget__scroll {
