@@ -284,6 +284,12 @@ select {
   max-width: 12ch;
 }
 
+.home-hero-title {
+  max-width: 17ch;
+  font-size: clamp(2.45rem, 5.2vw, 4.15rem);
+  line-height: 1.04;
+}
+
 .home-balanced-title {
   max-width: 18ch;
   text-wrap: balance;
@@ -3050,10 +3056,19 @@ textarea.field__control {
   .hero-copy--compact {
     display: flex;
     flex-direction: column;
+    gap: var(--space-5);
   }
 
   .hero-copy--compact > .planner-widget {
     min-height: 0;
+  }
+
+  .hero-copy--compact > .action-row {
+    margin-bottom: calc(var(--space-5) * -0.15);
+  }
+
+  .page-intro .planner-widget__scroll {
+    height: clamp(30rem, 50vw, 40rem);
   }
 
   .planner-time-board {
