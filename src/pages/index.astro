@@ -71,8 +71,9 @@ const futureExperiments = [
 
       <div class="stack">
         <p class="eyebrow">AI Infra / LLM / HPC / Codex / Agent Workflow</p>
-        <h1 class="title-display">
-          AI Infra 每周都在冒泡，这里负责把锅盖掀开一点。
+        <h1 class="title-display home-split-title">
+          <span>AI Infra 每周都在冒泡</span>
+          <span>这里负责把锅盖掀开一点</span>
         </h1>
         <p class="body-lg">
           看模型发布、GPU 风向、agent 工具和一点点国际大新闻。少一点发布会彩虹屁，多一点“这东西到底会影响谁”的人话翻译。
@@ -116,7 +117,14 @@ const futureExperiments = [
     <div class="home-surface__header">
       <div class="section-header__copy">
         <p class="eyebrow">Latest Radar / 本周热闹</p>
-        <h2 class="title-1">{latestRadar ? latestRadar.data.title : "Weekly AI Infra Radar"}</h2>
+        {latestRadar ? (
+          <h2 class="title-1 home-balanced-title">{latestRadar.data.title}</h2>
+        ) : (
+          <h2 class="title-1 home-split-title home-split-title--section">
+            <span>每周给 AI Infra 圈</span>
+            <span>做一次降噪</span>
+          </h2>
+        )}
         <p class="body-md">
           {latestRadar
             ? latestRadar.data.summary

@@ -98,15 +98,6 @@ const defaultWeekdayTasks: PlannerTask[] = [
     note: "把碎事集中处理，不让它们散开。",
   },
   {
-    id: "default-tue-project-night",
-    title: "做项目",
-    type: "project",
-    day: 1,
-    startTime: "20:00",
-    endTime: "22:00",
-    note: "先开一个小 PR 或整理一个小模块。",
-  },
-  {
     id: "default-tue-commute-night",
     title: "通勤",
     type: "commute",
@@ -204,15 +195,6 @@ const defaultWeekdayTasks: PlannerTask[] = [
     startTime: "14:00",
     endTime: "19:00",
     note: "把本周尾巴整理干净。",
-  },
-  {
-    id: "default-fri-project-night",
-    title: "做项目",
-    type: "project",
-    day: 4,
-    startTime: "20:00",
-    endTime: "22:00",
-    note: "周五晚上做项目，可以轻一点。",
   },
   {
     id: "default-fri-commute-night",

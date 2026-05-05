@@ -2,6 +2,7 @@
 import tokensCss from "../styles/tokens.css?raw";
 import globalCss from "../styles/global.css?raw";
 import motionCss from "../styles/motion.css?raw";
+import CursorTrail from "../components/sections/CursorTrail.astro";
 import { siteRoutes, withBase, type SiteRouteKey } from "../lib/routes";
 
 interface Props {
@@ -36,6 +37,7 @@ const navItems = [
     <style is:global set:html={inlineStyles}></style>
   </head>
   <body>
+    <CursorTrail />
     <div class="app-shell">
       <header class="site-header">
         <div class="app-container site-header__inner">

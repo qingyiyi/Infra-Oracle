@@ -23,6 +23,11 @@ const plannerTwoHourTicks = Array.from({ length: 10 }, (_, index) => {
   const hours = Math.trunc(minutes / 60);
   return `${String(hours).padStart(2, "0")}:00`;
 });
+const defaultPlannerCaption = defaultPlannerTasks.length === 0
+  ? "本周还很空，先随手放一件小事进去。"
+  : defaultPlannerTasks.length <= 8
+    ? "安排刚刚好，像一张愿意合作的待办清单。"
+    : "这周格子有点热闹，记得给自己留块空地。";
 ---
 
 <Panel as="aside" tone="subtle" padding="lg" class="planner-widget" data-planner-widget>
@@ -82,7 +87,7 @@ const plannerTwoHourTicks = Array.from({ length: 10 }, (_, index) => {
   </a>
 
   <div class="planner-widget__footer">
-    <p class="caption">横着看一周，竖着看时间；点开就能细改。</p>
+    <p class="caption" data-planner-widget-caption>{defaultPlannerCaption}</p>
     <Button href={plannerHref} variant="secondary" size="sm">打开 Planner</Button>
   </div>
 
@@ -93,6 +98,7 @@ const plannerTwoHourTicks = Array.from({ length: 10 }, (_, index) => {
       const dataNode = widget?.querySelector("[data-planner-widget-data]");
       const grid = widget?.querySelector("[data-planner-widget-grid]");
       const count = widget?.querySelector("[data-planner-widget-count]");
+      const caption = widget?.querySelector("[data-planner-widget-caption]");
 
       if (!widget || !dataNode || !grid) return;
 
@@ -218,6 +224,13 @@ const plannerTwoHourTicks = Array.from({ length: 10 }, (_, index) => {
         const tasks = loadTasks();
         grid.replaceChildren();
         if (count) count.textContent = `${tasks.length} items`;
+        if (caption) {
+          caption.textContent = tasks.length === 0
+            ? "本周还很空，先随手放一件小事进去。"
+            : tasks.length <= 8
+              ? "安排刚刚好，像一张愿意合作的待办清单。"
+              : "这周格子有点热闹，记得给自己留块空地。";
+        }
 
         for (const day of days) {
           const column = document.createElement("section");

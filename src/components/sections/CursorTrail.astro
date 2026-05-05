@@ -1,0 +1,42 @@
+<div class="cursor-trail" aria-hidden="true" data-cursor-trail></div>
+
+<script is:inline>
+  (() => {
+    const root = document.querySelector("[data-cursor-trail]");
+
+    if (!root) return;
+    if (!window.matchMedia("(pointer: fine)").matches) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+    const colors = ["#54d2a0", "#f0c96c", "#b59cff", "#70d6ff"];
+    let lastPoint = { x: 0, y: 0, time: 0 };
+    let colorIndex = 0;
+
+    function spawnDot(event) {
+      const now = performance.now();
+      const distance = Math.hypot(event.clientX - lastPoint.x, event.clientY - lastPoint.y);
+
+      if (now - lastPoint.time < 26 && distance < 18) return;
+
+      lastPoint = { x: event.clientX, y: event.clientY, time: now };
+
+      const dot = document.createElement("span");
+      const size = 5 + Math.random() * 7;
+      const driftX = (Math.random() - 0.5) * 26;
+      const driftY = -10 - Math.random() * 24;
+
+      dot.style.setProperty("--cursor-dot-x", `${event.clientX}px`);
+      dot.style.setProperty("--cursor-dot-y", `${event.clientY}px`);
+      dot.style.setProperty("--cursor-dot-size", `${size}px`);
+      dot.style.setProperty("--cursor-dot-drift-x", `${driftX}px`);
+      dot.style.setProperty("--cursor-dot-drift-y", `${driftY}px`);
+      dot.style.setProperty("--cursor-dot-color", colors[colorIndex % colors.length]);
+      colorIndex += 1;
+
+      root.append(dot);
+      window.setTimeout(() => dot.remove(), 720);
+    }
+
+    window.addEventListener("pointermove", spawnDot, { passive: true });
+  })();
+</script>
