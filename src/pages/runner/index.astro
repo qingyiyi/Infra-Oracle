@@ -302,6 +302,15 @@ const helpItems = [
       };
     }
 
+    function emptyJsonPostOptions(options = {}) {
+      return {
+        ...options,
+        method: "POST",
+        headers: authHeaders({ "content-type": "application/json", ...(options.headers || {}) }),
+        body: "{}",
+      };
+    }
+
     function formatFileSize(bytes) {
       const value = Number(bytes || 0);
       if (value >= 1024 * 1024) return `${(value / 1024 / 1024).toFixed(1)} MB`;
@@ -1472,7 +1481,7 @@ const helpItems = [
         startHeartbeat({ immediate: false });
         return state.jobId;
       }
-      const response = await api("/jobs", { method: "POST", headers: authHeaders() });
+      const response = await api("/jobs", emptyJsonPostOptions());
       const payload = await response.json();
       state.jobId = payload.job.id;
       setFilesFromJob(payload.job, { keepLocal: true });
@@ -1489,7 +1498,7 @@ const helpItems = [
     async function sendHeartbeat() {
       if (!state.token || !state.jobId || state.activeUploads > 0) return true;
       try {
-        await api(`/jobs/${state.jobId}/heartbeat`, { method: "POST", headers: authHeaders() });
+        await api(`/jobs/${state.jobId}/heartbeat`, emptyJsonPostOptions());
         state.heartbeatFailures = 0;
         state.heartbeatWarningShown = false;
         return true;
@@ -1513,8 +1522,7 @@ const helpItems = [
       if (state.leaving || !state.token || !state.jobId) return;
       state.leaving = true;
       fetch(runnerApiUrl(`/jobs/${state.jobId}/cleanup`), {
-        method: "POST",
-        headers: authHeaders(),
+        ...emptyJsonPostOptions(),
         keepalive: true,
       }).catch(() => undefined);
     }
@@ -1937,7 +1945,7 @@ const helpItems = [
       if (!requireAuthenticated()) return;
       if (!state.jobId) return;
       try {
-        await api(`/jobs/${state.jobId}/cleanup`, { method: "POST", headers: authHeaders() });
+        await api(`/jobs/${state.jobId}/cleanup`, emptyJsonPostOptions());
         resetJobState();
         await refreshHistory();
         setStatus("当前任务已清理。");
