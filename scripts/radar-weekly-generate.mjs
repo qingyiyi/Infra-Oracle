@@ -70,7 +70,7 @@ function buildPrompt({ start, end, issueNumber }) {
     "The frontmatter must match this structure:",
     `id: radar-${year}-w${issue}`,
     `slug: weekly-ai-infra-radar-${year}-w${issue}`,
-    `title: Weekly AI Infra Radar #${issueNumber}`,
+    `title: "Weekly AI Infra Radar #${issueNumber}"`,
     `week_label: ${year} W${issue}`,
     `week_start: ${dateOnly(start)}`,
     `week_end: ${dateOnly(end)}`,

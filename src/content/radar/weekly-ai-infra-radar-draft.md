@@ -1,7 +1,7 @@
 ---
 id: radar-draft
 slug: weekly-ai-infra-radar-draft
-title: Weekly AI Infra Radar Draft
+title: "Weekly AI Infra Radar Draft"
 week_label: Draft
 week_start: 2026-04-27
 week_end: 2026-05-03

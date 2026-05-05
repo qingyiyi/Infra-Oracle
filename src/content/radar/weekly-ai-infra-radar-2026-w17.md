@@ -1,7 +1,7 @@
 ---
 id: radar-2026-w17
 slug: weekly-ai-infra-radar-2026-w17
-title: Weekly AI Infra Radar #17
+title: "Weekly AI Infra Radar #17"
 week_label: 2026 W17
 week_start: 2026-04-20
 week_end: 2026-04-26

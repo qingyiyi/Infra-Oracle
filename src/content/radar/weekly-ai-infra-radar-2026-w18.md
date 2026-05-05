@@ -1,7 +1,7 @@
 ---
 id: radar-2026-w18
 slug: weekly-ai-infra-radar-2026-w18
-title: Weekly AI Infra Radar #18
+title: "Weekly AI Infra Radar #18"
 week_label: 2026 W18
 week_start: 2026-04-27
 week_end: 2026-05-03
@@ -30,6 +30,9 @@ items:
     background: Microsoft 与 OpenAI 的排他关系曾经定义了商业 AI 的第一阶段；随着 OpenAI 需要更多算力和企业渠道，独占结构开始变成扩张约束。
     details: 官方公告确认 Microsoft 的 OpenAI IP license 转为非排他，OpenAI 对 Microsoft 的收入分成继续到 2030 年但设总上限。
     impact: 对企业 AI Infra 团队来说，未来 OpenAI 模型可能通过 Azure、AWS、私有协议和其他云市场并存，采购、合规和路由策略会更复杂。
+    image_url: https://avatars.githubusercontent.com/u/14957082?s=400&v=4
+    image_alt: OpenAI GitHub organization avatar used as a public source marker for OpenAI partnership news.
+    image_source_url: https://github.com/openai
     watch_points:
       - OpenAI 是否会继续进入 Google Cloud、Oracle Cloud 或更多区域云。
       - Azure OpenAI 与 Bedrock OpenAI 的功能、价格、日志和数据边界差异。
@@ -55,6 +58,9 @@ items:
     background: 大企业通常不会因为单个模型迁移整套云治理体系；把模型放入既有云控制面，比单独 API 更容易进入生产。
     details: AWS 公告称客户可在 Bedrock 中访问 OpenAI frontier models，Codex on Amazon Bedrock 将 coding agent 带入 AWS 构建环境，Managed Agents 则服务多步骤任务编排。
     impact: 对 agent 平台而言，云原生治理、私网、日志、IAM 和采购承诺可能比裸模型 benchmark 更能决定落地速度。
+    image_url: https://avatars.githubusercontent.com/u/2232217?s=400&v=4
+    image_alt: AWS GitHub organization avatar used as a public source marker for OpenAI on AWS news.
+    image_source_url: https://github.com/aws
     watch_points:
       - limited preview 的区域、价格、模型 SKU 和数据处理条款。
       - Codex 在 AWS 环境中的 sandbox、权限和 repo 接入模式。
@@ -80,6 +86,9 @@ items:
     background: 多模态 agent 通常需要多个模型串联，增加延迟、上下文丢失和成本；NVIDIA 试图用单一模型减少系统复杂度。
     details: 官方称模型为 30B-A3B hybrid MoE，256K context，面向 Hugging Face、OpenRouter、build.nvidia.com 和 25+ 伙伴平台发布，并强调最高 9x throughput。
     impact: 对构建文档智能、GUI agent、视频/音频分析和企业多模态助手的团队来说，这类开放模型可降低对闭源多模态 API 的依赖。
+    image_url: https://avatars.githubusercontent.com/u/1728152?s=400&v=4
+    image_alt: NVIDIA GitHub organization avatar used as a public source marker for Nemotron news.
+    image_source_url: https://github.com/NVIDIA
     watch_points:
       - 实际推理成本、显存占用和吞吐是否符合官方宣称。
       - 与 GPT-5.5、Gemini、多模态 Qwen / DeepSeek 的任务边界。

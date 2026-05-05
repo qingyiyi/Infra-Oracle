@@ -12,7 +12,7 @@ Infra-Oracle 是一个基于 Astro 的 static-first 技术展示站，面向 AI 
 
 当前已落地的页面包括：
 
-- `/`：首页，包含站点定位、模块预览和 Future Experiments 入口
+- `/`：首页，作为多小组件展示面，包含短定位、最新 Radar 三张重点卡、Runner 边界卡、右侧 Fortune / Status 和 Future Experiments 轻量入口
 - `/radar/`：`Weekly AI Infra Radar` 最新一期与归档页
 - `/radar/<issue-slug>/`：单期 Radar 详情页，例如 `weekly-ai-infra-radar-2026-w18`
 - `/runner/`：`Web Codex Runner` 对话式任务原型页
@@ -37,6 +37,7 @@ Infra-Oracle 是一个基于 Astro 的 static-first 技术展示站，面向 AI 
 当前边界：
 
 - 每周一整理上一完整周，即上周一到上周日；当前已初始化 `2026 W17` 与 `2026 W18`
+- 首页只展示最新完整周报的 3 条重点大卡；缩略图使用外部官方 / 公开可展示 URL，授权不确定时回退到分类占位
 - SDK 联网脚本只能生成固定草稿 `src/content/radar/weekly-ai-infra-radar-draft.md`
 - `preview` 用于检查结构、时间窗、栏目比例和来源字段
 - `publish` 需要人工把条目标为 `approved` 后才会写入正式 issue，默认拒绝覆盖已有期号

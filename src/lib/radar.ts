@@ -74,13 +74,18 @@ export function getRadarWeekRange(entry: RadarEntry): string {
 }
 
 export function getRadarHighlights(entry: RadarEntry, limit = 5): RadarItem[] {
-  return [...entry.data.items]
+  return entry.data.items
+    .map((item, index) => ({ item, index }))
     .sort((left, right) => {
-      const highlightDelta = Number(Boolean(right.highlight)) - Number(Boolean(left.highlight));
+      const highlightDelta = Number(Boolean(right.item.highlight)) - Number(Boolean(left.item.highlight));
       if (highlightDelta !== 0) return highlightDelta;
-      const importanceDelta = importanceRank[right.importance] - importanceRank[left.importance];
+      if (left.item.highlight && right.item.highlight) return left.index - right.index;
+      const importanceDelta = importanceRank[right.item.importance] - importanceRank[left.item.importance];
       if (importanceDelta !== 0) return importanceDelta;
-      return right.published_at.getTime() - left.published_at.getTime();
+      const dateDelta = right.item.published_at.getTime() - left.item.published_at.getTime();
+      if (dateDelta !== 0) return dateDelta;
+      return left.index - right.index;
     })
+    .map(({ item }) => item)
     .slice(0, limit);
 }

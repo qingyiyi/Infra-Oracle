@@ -4,7 +4,6 @@ import Badge from "../components/ui/Badge.astro";
 import Button from "../components/ui/Button.astro";
 import FortuneWidget from "../components/sections/FortuneWidget.astro";
 import Panel from "../components/ui/Panel.astro";
-import SectionHeader from "../components/ui/SectionHeader.astro";
 import {
   formatRadarDate,
   getPublishedRadarEntries,
@@ -19,52 +18,39 @@ const radarEntries = await getPublishedRadarEntries();
 const latestRadar = radarEntries[0];
 const latestRadarDate = latestRadar ? formatRadarDate(latestRadar.data.published_at) : null;
 const latestRadarRoute = latestRadar ? getRadarIssuePath(latestRadar.slug) : withBase(siteRoutes.radar);
-const latestRadarHighlights = latestRadar ? getRadarHighlights(latestRadar, 5) : [];
+const latestRadarHighlights = latestRadar ? getRadarHighlights(latestRadar, 3) : [];
 const latestRadarRange = latestRadar ? getRadarWeekRange(latestRadar) : null;
 
-const modulePreviewCards = [
+const statusItems = [
   {
-    eyebrow: "Weekly AI Infra Radar",
-    title: latestRadar ? latestRadar.data.title : "Radar preview",
-    summary: latestRadar
-      ? latestRadar.data.summary
-      : "围绕 AI Infra / LLM / HPC 的人工筛选周报入口。",
-    note: latestRadar
-      ? latestRadar.data.hero_note
-      : "先做人工筛选与静态展示，不做无人审核自动发布。",
-    tags: latestRadar ? latestRadar.data.topics : ["weekly", "curated", "infra"],
-    route: withBase(siteRoutes.radar),
-    action: "查看 Radar 归档",
-    tone: "accent" as const,
-    status: latestRadar ? latestRadar.data.week_label : "current issue",
+    label: "Radar",
+    value: latestRadar ? `${latestRadar.data.week_label} live` : "drafting",
+    note: latestRadar ? latestRadar.data.hero_note : "等待第一期人工发布。",
   },
   {
-    eyebrow: "Web Codex Runner",
-    title: "Conversation-first document workbench",
-    summary:
-      "面向少量普通协作者的文字工作助手原型，先展示对话、任务提示、文件输入、输出下载和后端边界。",
-    note:
-      "当前不是已接通的远程执行平台；真实上传、搜索、Word 生成和额度统计都必须走独立 HTTPS 后端。",
-    tags: ["documents", "search", "docx"],
-    route: withBase(siteRoutes.runner),
-    action: "查看 Runner",
-    tone: "default" as const,
-    status: "prototype",
+    label: "Runner",
+    value: "prototype",
+    note: "公开页只展示入口和边界，真实执行依赖受控后端。",
+  },
+  {
+    label: "Fortune",
+    value: "daily fixed",
+    note: "首页右侧轻量签面，不进入独立导航。",
   },
 ];
 
 const futureExperiments = [
   {
     title: "Heartbeat",
-    summary: "定时提醒、人工 review 入口和轻量自动化的后续承接位。",
+    summary: "提醒、review 入口和轻量自动化的候选位置。",
   },
   {
     title: "Tooling Radar",
-    summary: "承接更细分的推理工具、框架更新和实验记录聚合入口。",
+    summary: "更细分地跟踪推理框架、agent 工具和工程实践。",
   },
   {
     title: "Reproduction Board",
-    summary: "未来用于承载论文复现、系统实验和方法追踪的展示位。",
+    summary: "承载论文复现、系统实验和方法追踪记录。",
   },
 ];
 ---
@@ -75,208 +61,148 @@ const futureExperiments = [
   description="一个围绕 AI Infra、LLM、HPC、Codex 与 agent workflow 的 static-first 技术实验站。"
 >
   <section class="section page-intro">
-    <div class="hero-copy">
+    <div class="hero-copy hero-copy--compact">
       <div class="cluster">
-        <Badge tone="accent">static-first</Badge>
-        <Badge tone="success">human-reviewed signals</Badge>
-        <Badge>GitHub Pages</Badge>
+        <Badge tone="accent">Weekly Radar</Badge>
+        <Badge tone="success">Runner Prototype</Badge>
+        <Badge>Cyber Fortune</Badge>
       </div>
 
       <div class="stack">
         <p class="eyebrow">AI Infra / LLM / HPC / Codex / Agent Workflow</p>
         <h1 class="title-display">
-          一个把精选情报、可执行模板和轻量实验聚到同一界面的技术实验站。
+          Infra-Oracle keeps the signal sharp and the tools close.
         </h1>
         <p class="body-lg">
-          这里优先提供经过人工筛选的 Radar 入口、边界清晰的 Runner 原型，以及首页右侧的每日 Fortune
-          小组件。首版不是营销页，也不是通用博客模板，而是一个持续可迭代的开发者界面。
+          一个 static-first 技术实验站：用人工审查的 Radar 看 AI Infra 动态，用 Runner 原型整理任务边界，再留一点每日签面的轻松感。
         </p>
       </div>
 
       <div class="action-row">
         <Button href={latestRadarRoute} variant="primary">查看本期 Radar</Button>
-        <Button href={withBase(siteRoutes.runner)} variant="secondary">了解 Runner 边界</Button>
-        <Button href="#future-experiments" variant="ghost">浏览未来实验入口</Button>
+        <Button href={withBase(siteRoutes.runner)} variant="secondary">进入 Runner</Button>
+        <Button href="#future-experiments" variant="ghost">Future Lab</Button>
       </div>
-
-      <ul class="surface-list">
-        <li>
-          <p class="mono-label">Why this exists</p>
-          <p class="body-md">把 AI Infra 信号、Codex/agent workflow 原型和实验性内容入口放在同一套清晰界面里。</p>
-        </li>
-        <li>
-          <p class="mono-label">What ships now</p>
-          <p class="body-md">可访问首页、Radar / Runner 两个模块页，以及首页每日 Fortune 小组件和用于后续迭代的共享设计系统。</p>
-        </li>
-        <li>
-          <p class="mono-label">What it is not</p>
-          <p class="body-md">不是无人审核自动发布系统，也不是浏览器直连模型凭证的远程执行平台。</p>
-        </li>
-      </ul>
     </div>
 
     <div class="page-intro__rail">
       <FortuneWidget />
 
-      <Panel tone="accent" padding="lg">
-        <p class="mono-label">Current focus</p>
-        <h2 class="title-2">Radar first, guarded tools second, playful edges in the rail.</h2>
-        <p class="body-sm">
-          首页当前按 `Radar -> Runner` 的主轴组织，先服务持续信息价值，再解释工具原型；
-          Fortune 收敛为右侧轻量卡片，只负责增加一点日常趣味。
-        </p>
+      <Panel as="aside" tone="subtle" padding="lg" class="status-card">
+        <div class="callout-row">
+          <Badge tone="accent">Now</Badge>
+          <Badge>{latestRadarDate ?? "static"}</Badge>
+        </div>
+        <h2 class="title-3">Today&apos;s surface</h2>
+        <ul class="status-list">
+          {statusItems.map((item) => (
+            <li>
+              <div>
+                <span>{item.label}</span>
+                <strong>{item.value}</strong>
+              </div>
+              <p>{item.note}</p>
+            </li>
+          ))}
+        </ul>
       </Panel>
-
-      <div class="stack-grid">
-        <Panel tone="subtle">
-          <div class="metric">
-            <span class="metric__value">2</span>
-            <span class="metric__label">core modules with live routes</span>
-          </div>
-        </Panel>
-        <Panel tone="subtle">
-          <div class="metric">
-            <span class="metric__value">1</span>
-            <span class="metric__label">latest Radar issue wired to the home preview</span>
-          </div>
-        </Panel>
-        <Panel tone="subtle">
-          <div class="metric">
-            <span class="metric__value">25</span>
-            <span class="metric__label">completed milestones in the current roadmap</span>
-          </div>
-        </Panel>
-      </div>
     </div>
   </section>
 
-  <section class="section">
-    <SectionHeader
-      eyebrow="Core Modules"
-      title="Two entry points, one shared interface."
-      description="首页先把最值得继续点进去的入口讲清楚：人工审查友好的 Radar，以及边界明确的 Runner；Fortune 作为右侧每日小组件保留轻互动。"
-    />
-
-    <div class="bento-grid">
-      {modulePreviewCards.map((module) => (
-        <Panel as="article" tone={module.tone} padding="lg" class="page-card">
-          <div class="callout-row">
-            <Badge tone="accent">{module.eyebrow}</Badge>
-            <Badge>{module.status}</Badge>
-          </div>
-          <h3 class="title-3">{module.title}</h3>
-          <p class="body-md">{module.summary}</p>
-          <div class="cluster">
-            {module.tags.map((tag) => (
-              <Badge>{tag}</Badge>
-            ))}
-          </div>
-          <p class="body-sm">{module.note}</p>
-          <div class="action-row">
-            <Button href={module.route} variant="primary">{module.action}</Button>
-          </div>
-        </Panel>
-      ))}
-    </div>
-  </section>
-
-  <section class="section">
-    <SectionHeader
-      eyebrow="This Week In View"
-      title="The current surface uses real content where it already exists."
-      description="Radar 预览直接连接当前 content collection；Runner 继续明确展示边界，而不假装完整功能已经实现。"
-    />
-
-    <div class="split-grid">
-      <Panel as="article" padding="lg">
-          <div class="callout-row">
-            <Badge tone="accent">Latest Radar</Badge>
-            {latestRadarDate && <Badge>{latestRadarDate}</Badge>}
-            {latestRadarRange && <Badge>{latestRadarRange}</Badge>}
-          </div>
-        <h3 class="title-2">{latestRadar ? latestRadar.data.title : "Weekly AI Infra Radar"}</h3>
+  <section class="section home-surface">
+    <div class="home-surface__header">
+      <div class="section-header__copy">
+        <p class="eyebrow">Latest Radar / 本周重点</p>
+        <h2 class="title-1">{latestRadar ? latestRadar.data.title : "Weekly AI Infra Radar"}</h2>
         <p class="body-md">
           {latestRadar
             ? latestRadar.data.summary
-            : "用 issue 级内容承载期号级元数据、编辑导语和后续归档结构。"}
+            : "每周一整理上一完整周的 AI Infra / LLM / HPC 信号，先人工确认，再发布到静态站点。"}
         </p>
-        <Panel tone="subtle">
-          <p class="mono-label">Editorial note</p>
-          <p class="body-sm">
-            {latestRadar
-              ? latestRadar.data.hero_note
-              : "人工筛选和审查入口仍然保留，不做无人审核自动发布。"}
+      </div>
+      <div class="action-row">
+        {latestRadarRange && <Badge>{latestRadarRange}</Badge>}
+        <Button href={withBase(siteRoutes.radar)} variant="secondary" size="sm">全部期数</Button>
+      </div>
+    </div>
+
+    {latestRadarHighlights.length > 0 && (
+      <div class="radar-feature-grid">
+        {latestRadarHighlights.map((item) => (
+          <article class="radar-feature-card">
+            <a
+              class="radar-feature-card__media"
+              href={item.image_source_url ?? item.source_url}
+              target="_blank"
+              rel="noreferrer"
+              aria-label={`查看图片或来源：${item.title}`}
+            >
+              {item.image_url ? (
+                <img src={item.image_url} alt={item.image_alt ?? item.title} loading="lazy" />
+              ) : (
+                <span>{radarCategoryLabels[item.category]}</span>
+              )}
+            </a>
+            <div class="radar-feature-card__body">
+              <div class="callout-row">
+                <Badge tone="accent">{radarCategoryLabels[item.category]}</Badge>
+                <Badge>{item.importance}</Badge>
+              </div>
+              <h3 class="title-3">{item.title}</h3>
+              <p class="body-sm">{item.impact ?? item.why_it_matters}</p>
+            </div>
+          </article>
+        ))}
+      </div>
+    )}
+
+    <div class="surface-row">
+      <Panel as="article" padding="lg" class="runner-home-card">
+        <div class="callout-row">
+          <Badge tone="warning">Web Codex Runner</Badge>
+          <Badge>guarded prototype</Badge>
+        </div>
+        <div class="runner-home-card__copy">
+          <h2 class="title-2">A conversation workbench for documents and research tasks.</h2>
+          <p class="body-md">
+            面向少量协作者的对话式工作台：上传资料、联网检索、生成 Markdown / Word。公开页面只承载入口和边界，模型密钥、文件和执行日志都不进入前端仓库。
           </p>
-        </Panel>
-        {latestRadarHighlights.length > 0 && (
-          <div class="radar-highlight-list">
-            {latestRadarHighlights.map((item) => (
-              <article class="radar-highlight-card">
-                <div class="radar-thumb" aria-label={item.image_alt ?? item.title}>
-                  {item.image_url ? (
-                    <img src={item.image_url} alt={item.image_alt ?? item.title} loading="lazy" />
-                  ) : (
-                    <span>{radarCategoryLabels[item.category]}</span>
-                  )}
-                </div>
-                <div class="stack">
-                  <div class="callout-row">
-                    <Badge tone="accent">{radarCategoryLabels[item.category]}</Badge>
-                    <Badge>{item.importance}</Badge>
-                  </div>
-                  <h4 class="title-3">{item.title}</h4>
-                  <p class="body-sm">{item.impact ?? item.why_it_matters}</p>
-                </div>
-              </article>
-            ))}
+        </div>
+        <div class="runner-home-card__footer">
+          <div class="cluster">
+            <Badge>files</Badge>
+            <Badge>web search</Badge>
+            <Badge>docx export</Badge>
           </div>
-        )}
-        <div class="action-row">
-          <Button href={latestRadarRoute} variant="secondary">进入本期</Button>
-          <Button href={withBase(siteRoutes.radar)} variant="ghost">查看归档</Button>
+          <Button href={withBase(siteRoutes.runner)} variant="secondary">打开 Runner</Button>
         </div>
       </Panel>
 
-      <Panel as="article" padding="lg">
-        <div class="callout-row">
-          <Badge tone="warning">Runner boundary</Badge>
-          <Badge>prototype only</Badge>
-        </div>
-        <h3 class="title-2">A task surface without fake execution promises.</h3>
-          <p class="body-sm">
-          Runner 当前展示对话式任务、文件与输出边界，不把后续服务端能力写成已经实现的网页功能。
-          </p>
-        <ul class="surface-list">
-          <li>
-            <p class="mono-label">Now</p>
-            <p class="body-sm">任务提示、对话原型、上传边界、输出格式和风险边界说明。</p>
-          </li>
-          <li>
-            <p class="mono-label">Later</p>
-            <p class="body-sm">共享口令、SSE 状态、文件解析、联网搜索、Word 生成和服务端执行链路。</p>
-          </li>
-        </ul>
-        <div class="action-row">
-          <Button href={withBase(siteRoutes.runner)} variant="secondary">进入 Runner</Button>
-        </div>
+      <Panel as="article" tone="accent" padding="lg" class="editor-note-card">
+        <p class="mono-label">Editorial lens</p>
+        <h3 class="title-3">{latestRadar ? latestRadar.data.hero_note : "Human review before publish."}</h3>
+        <p class="body-sm">
+          Radar 优先看模型分发、算力栈、agent 控制面和供应链变化；国际局势只在直接影响 AI Infra 时进入周报。
+        </p>
       </Panel>
     </div>
   </section>
 
-  <section class="section" id="future-experiments">
-    <SectionHeader
-      eyebrow="Future Experiments / Lab"
-      title="A visible expansion slot without crowding the main navigation."
-      description="Future Experiments 继续留在首页末尾承接后续模块，而不是现在就膨胀成顶层导航。"
-    />
+  <section class="section future-section" id="future-experiments">
+    <div class="home-surface__header">
+      <div class="section-header__copy">
+        <p class="eyebrow">Future Experiments</p>
+        <h2 class="title-2">Small slots for the next useful surfaces.</h2>
+      </div>
+    </div>
 
-    <div class="bento-grid">
+    <div class="future-grid">
       {futureExperiments.map((item) => (
-        <Panel as="article" tone="subtle" padding="lg" class="page-card">
-          <p class="mono-label">Reserved track</p>
-          <h3 class="title-3">{item.title}</h3>
-          <p class="body-sm">{item.summary}</p>
-        </Panel>
+        <article class="future-card">
+          <span>Lab</span>
+          <h3>{item.title}</h3>
+          <p>{item.summary}</p>
+        </article>
       ))}
     </div>
   </section>
