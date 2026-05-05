@@ -6,6 +6,7 @@ import {
   defaultPlannerTasks,
   getPlannerPayload,
   getPlannerTaskType,
+  getTaskTimeRangeText,
   plannerDays,
 } from "../../lib/planner";
 import { siteRoutes, withBase } from "../../lib/routes";
@@ -18,34 +19,29 @@ const previewTasks = defaultPlannerTasks.slice(0, 5);
   <div class="planner-widget__header">
     <div>
       <p class="mono-label">Weekly Plan</p>
-      <h2 class="title-3">本周安排</h2>
+      <h2 class="title-3">接下来做什么</h2>
     </div>
-    <Badge tone="accent" data-planner-widget-count>{defaultPlannerTasks.length} tasks</Badge>
+    <Badge tone="accent" data-planner-widget-count>{defaultPlannerTasks.length} items</Badge>
   </div>
 
-  <div class="planner-widget__days" aria-hidden="true">
-    {plannerDays.map((day) => (
-      <span>{day.shortLabel}</span>
-    ))}
-  </div>
-
-  <div class="planner-widget__bars" data-planner-widget-bars>
+  <div class="planner-widget__list" data-planner-widget-list>
     {previewTasks.map((task) => {
       const type = getPlannerTaskType(task.type);
+      const day = plannerDays[task.day];
       return (
-        <article
-          class="planner-widget__row"
-          style={`--task-start: ${task.startDay + 1}; --task-end: ${task.endDay + 2}; --task-color: ${type.color};`}
-        >
-          <span>{task.title}</span>
-          <em>{type.label}</em>
+        <article class="planner-widget__item" style={`--task-color: ${type.color};`}>
+          <span class="planner-widget__day">{day.label}</span>
+          <div>
+            <strong>{task.title}</strong>
+            <em>{getTaskTimeRangeText(task)} · {type.label}</em>
+          </div>
         </article>
       );
     })}
   </div>
 
   <div class="planner-widget__footer">
-    <p class="caption">编辑后首页会读取同一份本地计划。</p>
+    <p class="caption">把本周的正事和小确幸都塞进一张时间表。</p>
     <Button href={withBase(siteRoutes.planner)} variant="secondary" size="sm">打开 Planner</Button>
   </div>
 
@@ -54,10 +50,10 @@ const previewTasks = defaultPlannerTasks.slice(0, 5);
     (() => {
       const widget = document.querySelector("[data-planner-widget]");
       const dataNode = widget?.querySelector("[data-planner-widget-data]");
-      const bars = widget?.querySelector("[data-planner-widget-bars]");
+      const list = widget?.querySelector("[data-planner-widget-list]");
       const count = widget?.querySelector("[data-planner-widget-count]");
 
-      if (!widget || !dataNode || !bars) return;
+      if (!widget || !dataNode || !list) return;
 
       let payload;
 
@@ -67,10 +63,12 @@ const previewTasks = defaultPlannerTasks.slice(0, 5);
         return;
       }
 
-      const storageKey = payload.storageKey || "infra-oracle.weekly-planner.v1";
+      const storageKey = payload.storageKey || "infra-oracle.weekly-planner.v2";
       const taskTypes = Array.isArray(payload.taskTypes) ? payload.taskTypes : [];
       const defaultTasks = Array.isArray(payload.defaultTasks) ? payload.defaultTasks : [];
       const days = Array.isArray(payload.days) ? payload.days : [];
+      const startMinute = Number(payload.startMinute || 360);
+      const endMinute = Number(payload.endMinute || 1440);
       const typeMap = new Map(taskTypes.map((type) => [type.id, type]));
 
       function clampDay(value) {
@@ -79,18 +77,39 @@ const previewTasks = defaultPlannerTasks.slice(0, 5);
         return Math.max(0, Math.min(6, Math.trunc(number)));
       }
 
+      function timeToMinutes(value) {
+        const match = String(value || "").trim().match(/^(\d{1,2}):(\d{2})$/);
+        if (!match) return null;
+        const hours = Number(match[1]);
+        const minutes = Number(match[2]);
+        if (!Number.isInteger(hours) || !Number.isInteger(minutes)) return null;
+        if (hours < 0 || hours > 24 || minutes < 0 || minutes > 59) return null;
+        if (hours === 24 && minutes !== 0) return null;
+        return hours * 60 + minutes;
+      }
+
+      function minutesToTime(value) {
+        const minutes = Math.max(0, Math.min(24 * 60, Math.trunc(value)));
+        const hoursPart = Math.trunc(minutes / 60);
+        const minutesPart = minutes % 60;
+        return `${String(hoursPart).padStart(2, "0")}:${String(minutesPart).padStart(2, "0")}`;
+      }
+
       function normalizeTask(task, index = 0) {
         if (!task || typeof task !== "object") return null;
         const title = String(task.title || "").trim().slice(0, 60);
         if (!title) return null;
-        const startDay = clampDay(task.startDay);
-        const endDay = Math.max(startDay, clampDay(task.endDay));
+
+        const start = Math.max(startMinute, Math.min(endMinute - 1, timeToMinutes(task.startTime) ?? startMinute));
+        const end = Math.max(start + 1, Math.min(endMinute, timeToMinutes(task.endTime) ?? start + 60));
+
         return {
           id: String(task.id || `task-${index + 1}`),
           title,
           type: typeMap.has(task.type) ? task.type : "custom",
-          startDay,
-          endDay,
+          day: clampDay(task.day),
+          startTime: minutesToTime(start),
+          endTime: minutesToTime(end),
           note: String(task.note || "").trim().slice(0, 120),
         };
       }
@@ -98,9 +117,12 @@ const previewTasks = defaultPlannerTasks.slice(0, 5);
       function normalizeTasks(rawTasks) {
         const next = Array.isArray(rawTasks)
           ? rawTasks.map(normalizeTask).filter(Boolean)
-          : [];
-        return (next.length ? next : defaultTasks).slice().sort((a, b) =>
-          a.startDay - b.startDay || a.endDay - b.endDay || a.title.localeCompare(b.title)
+          : defaultTasks.map(normalizeTask).filter(Boolean);
+        return next.slice().sort((a, b) =>
+          a.day - b.day ||
+          (timeToMinutes(a.startTime) || startMinute) - (timeToMinutes(b.startTime) || startMinute) ||
+          (timeToMinutes(a.endTime) || endMinute) - (timeToMinutes(b.endTime) || endMinute) ||
+          a.title.localeCompare(b.title)
         );
       }
 
@@ -112,31 +134,70 @@ const previewTasks = defaultPlannerTasks.slice(0, 5);
         }
       }
 
-      function dayRangeText(task) {
-        const start = days[task.startDay]?.label || "周一";
-        const end = days[task.endDay]?.label || start;
-        return task.startDay === task.endDay ? start : `${start}-${end}`;
+      function getUpcomingTasks(tasks) {
+        const now = new Date();
+        const today = (now.getDay() + 6) % 7;
+        const nowMinutes = now.getHours() * 60 + now.getMinutes();
+
+        return tasks
+          .map((task) => {
+            const start = timeToMinutes(task.startTime) || startMinute;
+            const end = timeToMinutes(task.endTime) || endMinute;
+            let dayOffset = (task.day - today + 7) % 7;
+
+            if (dayOffset === 0 && end <= nowMinutes) {
+              dayOffset = 7;
+            }
+
+            const isRunning = dayOffset === 0 && start <= nowMinutes && end > nowMinutes;
+            return {
+              task,
+              dayOffset,
+              start,
+              isRunning,
+            };
+          })
+          .sort((left, right) =>
+            left.dayOffset - right.dayOffset ||
+            left.start - right.start ||
+            left.task.title.localeCompare(right.task.title)
+          )
+          .slice(0, 5);
       }
 
       function render() {
         const tasks = loadTasks();
-        bars.replaceChildren();
-        if (count) count.textContent = `${tasks.length} tasks`;
+        const upcomingTasks = getUpcomingTasks(tasks);
+        list.replaceChildren();
+        if (count) count.textContent = `${tasks.length} items`;
 
-        for (const task of tasks.slice(0, 5)) {
+        if (!upcomingTasks.length) {
+          const empty = document.createElement("p");
+          empty.className = "planner-empty";
+          empty.textContent = "这周还很空，可以去安排一点正事，或者安排不正事。";
+          list.append(empty);
+          return;
+        }
+
+        for (const { task, isRunning } of upcomingTasks) {
           const type = typeMap.get(task.type) || typeMap.get("custom") || { label: "自定义", color: "#c7cad2" };
-          const row = document.createElement("article");
-          row.className = "planner-widget__row";
-          row.style.setProperty("--task-start", String(task.startDay + 1));
-          row.style.setProperty("--task-end", String(task.endDay + 2));
-          row.style.setProperty("--task-color", type.color);
+          const day = days[task.day] || { label: "周一" };
+          const item = document.createElement("article");
+          item.className = "planner-widget__item";
+          item.style.setProperty("--task-color", type.color);
 
-          const title = document.createElement("span");
+          const dayBadge = document.createElement("span");
+          dayBadge.className = "planner-widget__day";
+          dayBadge.textContent = isRunning ? "进行中" : day.label;
+
+          const copy = document.createElement("div");
+          const title = document.createElement("strong");
           title.textContent = task.title;
           const meta = document.createElement("em");
-          meta.textContent = `${type.label} · ${dayRangeText(task)}`;
-          row.append(title, meta);
-          bars.append(row);
+          meta.textContent = `${day.label} ${task.startTime}-${task.endTime} · ${type.label}`;
+          copy.append(title, meta);
+          item.append(dayBadge, copy);
+          list.append(item);
         }
       }
 

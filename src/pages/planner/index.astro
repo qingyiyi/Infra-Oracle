@@ -5,9 +5,13 @@ import Button from "../../components/ui/Button.astro";
 import Panel from "../../components/ui/Panel.astro";
 import {
   defaultPlannerTasks,
+  getPlannerDayTaskLayout,
   getPlannerPayload,
   getPlannerTaskType,
+  getTaskPosition,
+  getTaskTimeRangeText,
   plannerDays,
+  plannerHourTicks,
   plannerTaskTypes,
 } from "../../lib/planner";
 import { siteRoutes, withBase } from "../../lib/routes";
@@ -18,21 +22,21 @@ const plannerPayload = JSON.stringify(getPlannerPayload()).replace(/</g, "\\u003
 <BaseLayout
   active="planner"
   title="Planner | GitHub Page / AI Infra & Codex Lab"
-  description="编辑本周工作、论文、项目、娱乐和休息安排的轻量甘特图。"
+  description="编辑本周通勤、工作、上课、项目和生活安排的时间轴日程。"
 >
   <section class="section page-intro planner-hero" data-planner-app>
     <div class="hero-copy">
       <div class="cluster">
         <Badge tone="accent">Weekly Planner</Badge>
-        <Badge tone="success">local only</Badge>
-        <Badge>no drag yet</Badge>
+        <Badge tone="success">06:00-24:00</Badge>
+        <Badge>1 min</Badge>
       </div>
 
       <div class="stack">
-        <p class="eyebrow">Work / Paper / Movie / Rest / Game</p>
-        <h1 class="title-display">把这一周排成一张不太严肃的甘特图。</h1>
+        <p class="eyebrow">Week / Time / Tiny Life</p>
+        <h1 class="title-display">本周时间表</h1>
         <p class="body-lg">
-          工作、读论文、改论文、做项目，也可以给电影、小说、运动和休息留格子。数据只保存在当前浏览器，首页会读取同一份本周计划。
+          把通勤、工作、上课和自己的时间放在同一张图里。严肃的事排清楚，轻松的事也要有位置。
         </p>
       </div>
 
@@ -44,9 +48,9 @@ const plannerPayload = JSON.stringify(getPlannerPayload()).replace(/</g, "\\u003
 
     <Panel as="aside" tone="accent" padding="lg" class="planner-note-card">
       <p class="mono-label">This week</p>
-      <h2 class="title-2">先把格子摆出来，拖拽以后再说。</h2>
+      <h2 class="title-2">让一周看起来没那么像一团毛线。</h2>
       <p class="body-sm">
-        首版用表单编辑日期范围，减少移动端误触和布局风险。后续可以在同一套任务数据上加拖拽调整日期、多周切换和导入导出。
+        早上六点到午夜，七天横着铺开。通勤、课程、工作和项目都放上去，剩下的空格就留给电影、小说和真正的休息。
       </p>
     </Panel>
   </section>
@@ -56,55 +60,75 @@ const plannerPayload = JSON.stringify(getPlannerPayload()).replace(/</g, "\\u003
       <div class="home-surface__header">
         <div class="section-header__copy">
           <p class="eyebrow">Week Board</p>
-          <h2 class="title-1">本周安排</h2>
-          <p class="body-md">横向条表示任务覆盖的日期范围；单日安排会占一格。</p>
+          <h2 class="title-1">这一周怎么过</h2>
+          <p class="body-md">每一行是一整天，横向位置对应当天的具体时间。</p>
         </div>
         <div class="cluster">
-          <Badge tone="accent" data-planner-count>{defaultPlannerTasks.length} tasks</Badge>
-          <Badge>localStorage</Badge>
+          <Badge tone="accent" data-planner-count>{defaultPlannerTasks.length} items</Badge>
+          <Badge>06-24</Badge>
         </div>
       </div>
 
-      <div class="planner-board" data-planner-board>
-        <div class="planner-board__days" aria-hidden="true">
-          {plannerDays.map((day) => (
-            <span>
-              <strong>{day.label}</strong>
-              <em>{day.shortLabel}</em>
-            </span>
-          ))}
+      <div class="planner-time-board" data-planner-board>
+        <div class="planner-time-board__header" aria-hidden="true">
+          <span class="planner-time-board__corner">Day</span>
+          <div class="planner-time-axis">
+            {plannerHourTicks.map((tick, index) => (
+              <span style={`--tick-left: ${(index / (plannerHourTicks.length - 1)) * 100}%;`}>{tick}</span>
+            ))}
+          </div>
         </div>
-        <div class="planner-board__rows" data-planner-rows>
-          {defaultPlannerTasks.map((task) => {
-            const type = getPlannerTaskType(task.type);
+
+        <div class="planner-time-board__rows" data-planner-rows>
+          {plannerDays.map((day) => {
+            const layout = getPlannerDayTaskLayout(defaultPlannerTasks.filter((task) => task.day === day.index));
             return (
-              <article
-                class="planner-task-row"
-                style={`--task-start: ${task.startDay + 1}; --task-end: ${task.endDay + 2}; --task-color: ${type.color};`}
-              >
-                <button type="button" class="planner-task-bar" data-task-id={task.id}>
-                  <span>{task.title}</span>
-                  <em>{type.label}</em>
-                </button>
-              </article>
+              <section class="planner-day-row" data-day-row={day.index}>
+                <div class="planner-day-label">
+                  <strong>{day.label}</strong>
+                  <span>{day.shortLabel}</span>
+                </div>
+                <div class="planner-day-track" style={`--lane-count: ${layout.laneCount};`}>
+                  {layout.items.map(({ task, laneIndex }) => {
+                    const type = getPlannerTaskType(task.type);
+                    const position = getTaskPosition(task);
+                    return (
+                      <button
+                        type="button"
+                        class="planner-task-bar"
+                        data-task-id={task.id}
+                        style={`--task-left: ${position.left}%; --task-width: ${position.width}%; --task-top: ${laneIndex}; --task-color: ${type.color};`}
+                      >
+                        <span>{task.title}</span>
+                        <em>{getTaskTimeRangeText(task)} · {type.label}</em>
+                      </button>
+                    );
+                  })}
+                </div>
+              </section>
             );
           })}
         </div>
       </div>
 
       <div class="planner-mobile-list" data-planner-mobile-list>
-        {defaultPlannerTasks.slice(0, 5).map((task) => {
-          const type = getPlannerTaskType(task.type);
-          return (
-            <article class="planner-mobile-item" style={`--task-color: ${type.color};`}>
-              <div>
-                <strong>{task.title}</strong>
-                <span>{plannerDays[task.startDay].label} - {plannerDays[task.endDay].label}</span>
-              </div>
-              <em>{type.label}</em>
-            </article>
-          );
-        })}
+        {plannerDays.map((day) => (
+          <section class="planner-mobile-day">
+            <h3>{day.label}</h3>
+            {defaultPlannerTasks.filter((task) => task.day === day.index).map((task) => {
+              const type = getPlannerTaskType(task.type);
+              return (
+                <article class="planner-mobile-item" style={`--task-color: ${type.color};`}>
+                  <div>
+                    <strong>{task.title}</strong>
+                    <span>{getTaskTimeRangeText(task)} · {task.note}</span>
+                  </div>
+                  <em>{type.label}</em>
+                </article>
+              );
+            })}
+          </section>
+        ))}
       </div>
     </Panel>
 
@@ -122,7 +146,7 @@ const plannerPayload = JSON.stringify(getPlannerPayload()).replace(/</g, "\\u003
           <input type="hidden" name="id" data-planner-id />
           <label class="field">
             <span class="field__label">标题</span>
-            <input class="field__control" name="title" maxlength="60" placeholder="比如：改论文图表说明" required />
+            <input class="field__control" name="title" maxlength="60" placeholder="比如：读论文 / 改图表 / 看电影" required />
           </label>
 
           <div class="form-grid">
@@ -136,8 +160,8 @@ const plannerPayload = JSON.stringify(getPlannerPayload()).replace(/</g, "\\u003
             </label>
 
             <label class="field">
-              <span class="field__label">开始</span>
-              <select class="field__control" name="startDay">
+              <span class="field__label">星期</span>
+              <select class="field__control" name="day">
                 {plannerDays.map((day) => (
                   <option value={day.index}>{day.label}</option>
                 ))}
@@ -145,12 +169,13 @@ const plannerPayload = JSON.stringify(getPlannerPayload()).replace(/</g, "\\u003
             </label>
 
             <label class="field">
-              <span class="field__label">结束</span>
-              <select class="field__control" name="endDay">
-                {plannerDays.map((day) => (
-                  <option value={day.index}>{day.label}</option>
-                ))}
-              </select>
+              <span class="field__label">开始时间</span>
+              <input class="field__control" name="startTime" inputmode="numeric" maxlength="5" placeholder="08:00" required />
+            </label>
+
+            <label class="field">
+              <span class="field__label">结束时间</span>
+              <input class="field__control" name="endTime" inputmode="numeric" maxlength="5" placeholder="10:00" required />
             </label>
           </div>
 
@@ -171,7 +196,7 @@ const plannerPayload = JSON.stringify(getPlannerPayload()).replace(/</g, "\\u003
 
       <Panel as="section" tone="subtle" padding="lg" class="planner-type-card">
         <p class="mono-label">Task types</p>
-        <h2 class="title-3">可以工作，也可以摸鱼得体。</h2>
+        <h2 class="title-3">工作要有格子，摸鱼也可以有姓名。</h2>
         <div class="planner-type-grid">
           {plannerTaskTypes.map((type) => (
             <button type="button" class="planner-type-chip" style={`--task-color: ${type.color};`} data-planner-type={type.id}>
@@ -213,7 +238,10 @@ const plannerPayload = JSON.stringify(getPlannerPayload()).replace(/</g, "\\u003
         const types = Array.isArray(payload.taskTypes) ? payload.taskTypes : [];
         const defaultTasks = Array.isArray(payload.defaultTasks) ? payload.defaultTasks : [];
         const typeMap = new Map(types.map((type) => [type.id, type]));
-        const storageKey = payload.storageKey || "infra-oracle.weekly-planner.v1";
+        const storageKey = payload.storageKey || "infra-oracle.weekly-planner.v2";
+        const startMinute = Number(payload.startMinute || 360);
+        const endMinute = Number(payload.endMinute || 1440);
+        const totalMinutes = endMinute - startMinute;
         let tasks = loadTasks();
 
         function clampDay(value) {
@@ -222,18 +250,48 @@ const plannerPayload = JSON.stringify(getPlannerPayload()).replace(/</g, "\\u003
           return Math.max(0, Math.min(6, Math.trunc(number)));
         }
 
+        function timeToMinutes(value) {
+          const match = String(value || "").trim().match(/^(\d{1,2}):(\d{2})$/);
+          if (!match) return null;
+          const hours = Number(match[1]);
+          const minutes = Number(match[2]);
+          if (!Number.isInteger(hours) || !Number.isInteger(minutes)) return null;
+          if (hours < 0 || hours > 24 || minutes < 0 || minutes > 59) return null;
+          if (hours === 24 && minutes !== 0) return null;
+          return hours * 60 + minutes;
+        }
+
+        function minutesToTime(value) {
+          const minutes = Math.max(0, Math.min(24 * 60, Math.trunc(value)));
+          const hoursPart = Math.trunc(minutes / 60);
+          const minutesPart = minutes % 60;
+          return `${String(hoursPart).padStart(2, "0")}:${String(minutesPart).padStart(2, "0")}`;
+        }
+
+        function normalizeTime(value, fallback) {
+          const minutes = timeToMinutes(value);
+          if (minutes === null) return minutesToTime(fallback);
+          return minutesToTime(Math.max(startMinute, Math.min(endMinute, minutes)));
+        }
+
         function normalizeTask(task, index = 0) {
           if (!task || typeof task !== "object") return null;
           const title = String(task.title || "").trim().slice(0, 60);
           if (!title) return null;
-          const startDay = clampDay(task.startDay);
-          const endDay = Math.max(startDay, clampDay(task.endDay));
+
+          const start = Math.max(
+            startMinute,
+            Math.min(endMinute - 1, timeToMinutes(normalizeTime(task.startTime, startMinute)) ?? startMinute),
+          );
+          const end = Math.max(start + 1, Math.min(endMinute, timeToMinutes(normalizeTime(task.endTime, start + 60)) ?? start + 60));
+
           return {
             id: String(task.id || `task-${index + 1}`).replace(/[^a-zA-Z0-9_-]+/g, "-").slice(0, 80),
             title,
             type: typeMap.has(task.type) ? task.type : "custom",
-            startDay,
-            endDay,
+            day: clampDay(task.day),
+            startTime: minutesToTime(start),
+            endTime: minutesToTime(end),
             note: String(task.note || "").trim().slice(0, 120),
           };
         }
@@ -241,9 +299,12 @@ const plannerPayload = JSON.stringify(getPlannerPayload()).replace(/</g, "\\u003
         function normalizeTasks(rawTasks) {
           const next = Array.isArray(rawTasks)
             ? rawTasks.map(normalizeTask).filter(Boolean)
-            : [];
-          return (next.length ? next : defaultTasks).slice().sort((a, b) =>
-            a.startDay - b.startDay || a.endDay - b.endDay || a.title.localeCompare(b.title)
+            : defaultTasks.map(normalizeTask).filter(Boolean);
+          return next.slice().sort((a, b) =>
+            a.day - b.day ||
+            (timeToMinutes(a.startTime) || startMinute) - (timeToMinutes(b.startTime) || startMinute) ||
+            (timeToMinutes(a.endTime) || endMinute) - (timeToMinutes(b.endTime) || endMinute) ||
+            a.title.localeCompare(b.title)
           );
         }
 
@@ -264,10 +325,8 @@ const plannerPayload = JSON.stringify(getPlannerPayload()).replace(/</g, "\\u003
           return typeMap.get(task.type) || typeMap.get("custom") || { label: "自定义", color: "#c7cad2" };
         }
 
-        function dayRangeText(task) {
-          const start = days[task.startDay]?.label || "周一";
-          const end = days[task.endDay]?.label || start;
-          return task.startDay === task.endDay ? start : `${start} - ${end}`;
+        function timeRangeText(task) {
+          return `${task.startTime}-${task.endTime}`;
         }
 
         function setMessage(text, tone = "") {
@@ -276,12 +335,22 @@ const plannerPayload = JSON.stringify(getPlannerPayload()).replace(/</g, "\\u003
           message.dataset.tone = tone;
         }
 
+        function taskPosition(task) {
+          const start = Math.max(startMinute, Math.min(endMinute, timeToMinutes(task.startTime) ?? startMinute));
+          const end = Math.max(start + 1, Math.min(endMinute, timeToMinutes(task.endTime) ?? endMinute));
+          return {
+            left: ((start - startMinute) / totalMinutes) * 100,
+            width: ((end - start) / totalMinutes) * 100,
+          };
+        }
+
         function resetForm() {
           form.reset();
           form.elements.id.value = "";
           form.elements.type.value = "work";
-          form.elements.startDay.value = "0";
-          form.elements.endDay.value = "0";
+          form.elements.day.value = "0";
+          form.elements.startTime.value = "10:00";
+          form.elements.endTime.value = "12:00";
           if (formTitle) formTitle.textContent = "新增安排";
           if (deleteButton) deleteButton.disabled = true;
           setMessage("");
@@ -293,80 +362,165 @@ const plannerPayload = JSON.stringify(getPlannerPayload()).replace(/</g, "\\u003
           form.elements.id.value = task.id;
           form.elements.title.value = task.title;
           form.elements.type.value = task.type;
-          form.elements.startDay.value = String(task.startDay);
-          form.elements.endDay.value = String(task.endDay);
+          form.elements.day.value = String(task.day);
+          form.elements.startTime.value = task.startTime;
+          form.elements.endTime.value = task.endTime;
           form.elements.note.value = task.note || "";
           if (formTitle) formTitle.textContent = "编辑安排";
           if (deleteButton) deleteButton.disabled = false;
-          setMessage(`正在编辑：${task.title}`);
+          setMessage(`正在编辑：${days[task.day]?.label || "这天"} ${timeRangeText(task)} · ${task.title}`);
           form.scrollIntoView({ behavior: "smooth", block: "center" });
         }
 
-        function render() {
+        function getDayTaskLayout(dayTasks) {
+          const sorted = dayTasks.slice().sort((a, b) =>
+            (timeToMinutes(a.startTime) || startMinute) - (timeToMinutes(b.startTime) || startMinute) ||
+            (timeToMinutes(a.endTime) || endMinute) - (timeToMinutes(b.endTime) || endMinute) ||
+            a.title.localeCompare(b.title)
+          );
+          const laneEnds = [];
+          const items = sorted.map((task) => {
+            const start = timeToMinutes(task.startTime) || startMinute;
+            const end = timeToMinutes(task.endTime) || endMinute;
+            let laneIndex = laneEnds.findIndex((laneEnd) => laneEnd <= start);
+
+            if (laneIndex === -1) {
+              laneIndex = laneEnds.length;
+              laneEnds.push(end);
+            } else {
+              laneEnds[laneIndex] = end;
+            }
+
+            return { task, laneIndex };
+          });
+          return { items, laneCount: Math.max(laneEnds.length, 1) };
+        }
+
+        function renderDesktopRows() {
           rows.replaceChildren();
+
+          for (const day of days) {
+            const section = document.createElement("section");
+            section.className = "planner-day-row";
+            section.dataset.dayRow = String(day.index);
+
+            const label = document.createElement("div");
+            label.className = "planner-day-label";
+            const dayName = document.createElement("strong");
+            dayName.textContent = day.label;
+            const dayShort = document.createElement("span");
+            dayShort.textContent = day.shortLabel;
+            label.append(dayName, dayShort);
+
+            const track = document.createElement("div");
+            track.className = "planner-day-track";
+            const layout = getDayTaskLayout(tasks.filter((task) => task.day === day.index));
+            track.style.setProperty("--lane-count", String(layout.laneCount));
+
+            for (const { task, laneIndex } of layout.items) {
+              const type = taskType(task);
+              const position = taskPosition(task);
+              const bar = document.createElement("button");
+              bar.type = "button";
+              bar.className = "planner-task-bar";
+              bar.dataset.taskId = task.id;
+              bar.title = task.note || task.title;
+              bar.style.setProperty("--task-left", `${position.left}%`);
+              bar.style.setProperty("--task-width", `${position.width}%`);
+              bar.style.setProperty("--task-top", String(laneIndex));
+              bar.style.setProperty("--task-color", type.color);
+              bar.addEventListener("click", () => editTask(task.id));
+
+              const title = document.createElement("span");
+              title.textContent = task.title;
+              const meta = document.createElement("em");
+              meta.textContent = `${timeRangeText(task)} · ${type.label}`;
+              bar.append(title, meta);
+              track.append(bar);
+            }
+
+            if (!layout.items.length) {
+              const empty = document.createElement("p");
+              empty.className = "planner-day-empty";
+              empty.textContent = "空着也挺好。";
+              track.append(empty);
+            }
+
+            section.append(label, track);
+            rows.append(section);
+          }
+        }
+
+        function renderMobileList() {
           mobileList.replaceChildren();
-          if (count) count.textContent = `${tasks.length} tasks`;
 
-          for (const task of tasks) {
-            const type = taskType(task);
-            const row = document.createElement("article");
-            row.className = "planner-task-row";
-            row.style.setProperty("--task-start", String(task.startDay + 1));
-            row.style.setProperty("--task-end", String(task.endDay + 2));
-            row.style.setProperty("--task-color", type.color);
+          for (const day of days) {
+            const dayTasks = tasks.filter((task) => task.day === day.index);
+            const section = document.createElement("section");
+            section.className = "planner-mobile-day";
 
-            const bar = document.createElement("button");
-            bar.type = "button";
-            bar.className = "planner-task-bar";
-            bar.dataset.taskId = task.id;
-            bar.title = task.note || task.title;
-            bar.addEventListener("click", () => editTask(task.id));
+            const heading = document.createElement("h3");
+            heading.textContent = day.label;
+            section.append(heading);
 
-            const title = document.createElement("span");
-            title.textContent = task.title;
-            const meta = document.createElement("em");
-            meta.textContent = `${type.label} · ${dayRangeText(task)}`;
-            bar.append(title, meta);
-            row.append(bar);
-            rows.append(row);
+            if (!dayTasks.length) {
+              const empty = document.createElement("p");
+              empty.className = "planner-empty";
+              empty.textContent = "今天留白。";
+              section.append(empty);
+            }
 
-            const item = document.createElement("article");
-            item.className = "planner-mobile-item";
-            item.style.setProperty("--task-color", type.color);
-            const copy = document.createElement("div");
-            const mobileTitle = document.createElement("strong");
-            mobileTitle.textContent = task.title;
-            const range = document.createElement("span");
-            range.textContent = task.note ? `${dayRangeText(task)} · ${task.note}` : dayRangeText(task);
-            copy.append(mobileTitle, range);
-            const tag = document.createElement("em");
-            tag.textContent = type.label;
-            item.append(copy, tag);
-            item.addEventListener("click", () => editTask(task.id));
-            mobileList.append(item);
+            for (const task of dayTasks) {
+              const type = taskType(task);
+              const item = document.createElement("article");
+              item.className = "planner-mobile-item";
+              item.style.setProperty("--task-color", type.color);
+              const copy = document.createElement("div");
+              const mobileTitle = document.createElement("strong");
+              mobileTitle.textContent = task.title;
+              const range = document.createElement("span");
+              range.textContent = task.note ? `${timeRangeText(task)} · ${task.note}` : timeRangeText(task);
+              copy.append(mobileTitle, range);
+              const tag = document.createElement("em");
+              tag.textContent = type.label;
+              item.append(copy, tag);
+              item.addEventListener("click", () => editTask(task.id));
+              section.append(item);
+            }
+
+            mobileList.append(section);
           }
+        }
 
-          if (!tasks.length) {
-            const empty = document.createElement("p");
-            empty.className = "planner-empty";
-            empty.textContent = "这一周还是空白。先加一条安排，或者恢复示例。";
-            rows.append(empty);
-          }
+        function render() {
+          if (count) count.textContent = `${tasks.length} items`;
+          renderDesktopRows();
+          renderMobileList();
         }
 
         form.addEventListener("submit", (event) => {
           event.preventDefault();
           const title = String(form.elements.title.value || "").trim();
-          const startDay = clampDay(form.elements.startDay.value);
-          const endDay = clampDay(form.elements.endDay.value);
+          const start = timeToMinutes(form.elements.startTime.value);
+          const end = timeToMinutes(form.elements.endTime.value);
 
           if (!title) {
             setMessage("标题不能为空。", "error");
             return;
           }
 
-          if (endDay < startDay) {
-            setMessage("结束时间不能早于开始时间。", "error");
+          if (start === null || end === null) {
+            setMessage("时间格式请写成 HH:mm，例如 08:30。", "error");
+            return;
+          }
+
+          if (start < startMinute || end > endMinute) {
+            setMessage("时间需要在 06:00 到 24:00 之间。", "error");
+            return;
+          }
+
+          if (end <= start) {
+            setMessage("结束时间必须晚于开始时间。", "error");
             return;
           }
 
@@ -375,8 +529,9 @@ const plannerPayload = JSON.stringify(getPlannerPayload()).replace(/</g, "\\u003
             id: existingId || `task-${Date.now().toString(36)}-${Math.random().toString(16).slice(2, 7)}`,
             title,
             type: form.elements.type.value,
-            startDay,
-            endDay,
+            day: clampDay(form.elements.day.value),
+            startTime: minutesToTime(start),
+            endTime: minutesToTime(end),
             note: String(form.elements.note.value || "").trim(),
           };
           const normalized = normalizeTask(task);
