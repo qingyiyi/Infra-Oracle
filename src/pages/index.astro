@@ -23,34 +23,34 @@ const latestRadarRange = latestRadar ? getRadarWeekRange(latestRadar) : null;
 
 const statusItems = [
   {
-    label: "Radar",
-    value: latestRadar ? `${latestRadar.data.week_label} live` : "drafting",
-    note: latestRadar ? latestRadar.data.hero_note : "等待第一期人工发布。",
+    label: "本周雷达",
+    value: latestRadar ? latestRadar.data.week_label : "整理中",
+    note: latestRadar ? "模型、云、GPU 和 agent 控制面的本周速递。" : "新一期正在翻资料。",
   },
   {
     label: "Runner",
-    value: "prototype",
-    note: "公开页只展示入口和边界，真实执行依赖受控后端。",
+    value: "可试用",
+    note: "把 PDF、网页和想法丢进去，让它先帮你捋一遍。",
   },
   {
-    label: "Fortune",
-    value: "daily fixed",
-    note: "首页右侧轻量签面，不进入独立导航。",
+    label: "今日签面",
+    value: "每日一抽",
+    note: "不负责预测未来，只负责让打开页面轻松一点。",
   },
 ];
 
 const futureExperiments = [
   {
-    title: "Heartbeat",
-    summary: "提醒、review 入口和轻量自动化的候选位置。",
+    title: "Paper Snacks",
+    summary: "把爆款论文压成几口能咽下去的技术零食。",
   },
   {
-    title: "Tooling Radar",
-    summary: "更细分地跟踪推理框架、agent 工具和工程实践。",
+    title: "GPU Weather",
+    summary: "算力价格、供应和新卡传闻，像看天气一样看一眼。",
   },
   {
-    title: "Reproduction Board",
-    summary: "承载论文复现、系统实验和方法追踪记录。",
+    title: "Agent Bloopers",
+    summary: "记录 agent 翻车现场：有用、好笑，并且能少踩一次坑。",
   },
 ];
 ---
@@ -58,28 +58,28 @@ const futureExperiments = [
 <BaseLayout
   active="home"
   title="GitHub Page / AI Infra & Codex Lab"
-  description="一个围绕 AI Infra、LLM、HPC、Codex 与 agent workflow 的 static-first 技术实验站。"
+  description="AI Infra、模型发布、GPU 风向和 agent 工具的每周观察。"
 >
   <section class="section page-intro">
     <div class="hero-copy hero-copy--compact">
       <div class="cluster">
         <Badge tone="accent">Weekly Radar</Badge>
-        <Badge tone="success">Runner Prototype</Badge>
+        <Badge tone="success">Research Runner</Badge>
         <Badge>Cyber Fortune</Badge>
       </div>
 
       <div class="stack">
         <p class="eyebrow">AI Infra / LLM / HPC / Codex / Agent Workflow</p>
         <h1 class="title-display">
-          Infra-Oracle keeps the signal sharp and the tools close.
+          AI Infra 每周都在冒泡，这里负责把锅盖掀开一点。
         </h1>
         <p class="body-lg">
-          一个 static-first 技术实验站：用人工审查的 Radar 看 AI Infra 动态，用 Runner 原型整理任务边界，再留一点每日签面的轻松感。
+          看模型发布、GPU 风向、agent 工具和一点点国际大新闻。少一点发布会彩虹屁，多一点“这东西到底会影响谁”的人话翻译。
         </p>
       </div>
 
       <div class="action-row">
-        <Button href={latestRadarRoute} variant="primary">查看本期 Radar</Button>
+        <Button href={latestRadarRoute} variant="primary">看本周热闹</Button>
         <Button href={withBase(siteRoutes.runner)} variant="secondary">进入 Runner</Button>
         <Button href="#future-experiments" variant="ghost">Future Lab</Button>
       </div>
@@ -93,7 +93,7 @@ const futureExperiments = [
           <Badge tone="accent">Now</Badge>
           <Badge>{latestRadarDate ?? "static"}</Badge>
         </div>
-        <h2 class="title-3">Today&apos;s surface</h2>
+        <h2 class="title-3">今天先看这些</h2>
         <ul class="status-list">
           {statusItems.map((item) => (
             <li>
@@ -112,17 +112,17 @@ const futureExperiments = [
   <section class="section home-surface">
     <div class="home-surface__header">
       <div class="section-header__copy">
-        <p class="eyebrow">Latest Radar / 本周重点</p>
+        <p class="eyebrow">Latest Radar / 本周热闹</p>
         <h2 class="title-1">{latestRadar ? latestRadar.data.title : "Weekly AI Infra Radar"}</h2>
         <p class="body-md">
           {latestRadar
             ? latestRadar.data.summary
-            : "每周一整理上一完整周的 AI Infra / LLM / HPC 信号，先人工确认，再发布到静态站点。"}
+            : "每周一把上一周的 AI Infra / LLM / HPC 大事捞出来，去掉噪音，留下值得追的几条。"}
         </p>
       </div>
       <div class="action-row">
         {latestRadarRange && <Badge>{latestRadarRange}</Badge>}
-        <Button href={withBase(siteRoutes.radar)} variant="secondary" size="sm">全部期数</Button>
+        <Button href={withBase(siteRoutes.radar)} variant="secondary" size="sm">翻往期</Button>
       </div>
     </div>
 
@@ -160,12 +160,12 @@ const futureExperiments = [
       <Panel as="article" padding="lg" class="runner-home-card">
         <div class="callout-row">
           <Badge tone="warning">Web Codex Runner</Badge>
-          <Badge>guarded prototype</Badge>
+          <Badge>research helper</Badge>
         </div>
         <div class="runner-home-card__copy">
-          <h2 class="title-2">A conversation workbench for documents and research tasks.</h2>
+          <h2 class="title-2">资料太长？先让 Runner 替你通读一遍。</h2>
           <p class="body-md">
-            面向少量协作者的对话式工作台：上传资料、联网检索、生成 Markdown / Word。公开页面只承载入口和边界，模型密钥、文件和执行日志都不进入前端仓库。
+            PDF、网页、会议纪要和临时想法都可以先丢进来。它会帮你总结、联网补资料，并把结果整理成 Markdown 或 Word，适合把“我先看看”变成“我已经看过一版”。
           </p>
         </div>
         <div class="runner-home-card__footer">
@@ -180,9 +180,9 @@ const futureExperiments = [
 
       <Panel as="article" tone="accent" padding="lg" class="editor-note-card">
         <p class="mono-label">Editorial lens</p>
-        <h3 class="title-3">{latestRadar ? latestRadar.data.hero_note : "Human review before publish."}</h3>
+        <h3 class="title-3">{latestRadar ? latestRadar.data.hero_note : "先看热闹，再看门道。"}</h3>
         <p class="body-sm">
-          Radar 优先看模型分发、算力栈、agent 控制面和供应链变化；国际局势只在直接影响 AI Infra 时进入周报。
+          这里关心的是“会不会改变开发者、企业和算力账单”。单纯热搜可以路过，能改变工具链和采购单的才值得多看两眼。
         </p>
       </Panel>
     </div>
@@ -192,7 +192,7 @@ const futureExperiments = [
     <div class="home-surface__header">
       <div class="section-header__copy">
         <p class="eyebrow">Future Experiments</p>
-        <h2 class="title-2">Small slots for the next useful surfaces.</h2>
+        <h2 class="title-2">一些还没长大的小栏目。</h2>
       </div>
     </div>
 

@@ -1,6 +1,5 @@
 ---
 id: radar-2026-w17
-slug: weekly-ai-infra-radar-2026-w17
 title: "Weekly AI Infra Radar #17"
 week_label: 2026 W17
 week_start: 2026-04-20
@@ -30,6 +29,9 @@ items:
     background: 过去一年 OpenAI 持续把 Codex、ChatGPT 和企业工作流拉近；GPT-5.5 是这条产品线在模型层面的集中升级。
     details: 官方材料强调 GPT-5.5 在 Terminal-Bench、SWE-Bench Pro、BrowseComp、FrontierMath 等任务上的提升，并突出更少 token 与更少重试完成复杂任务。
     impact: 对开发者工具和企业 agent 平台而言，模型能力提升会直接改变“是否可以把完整任务交给模型”的边界，也会推高对上下文管理、工具调用和验证流程的要求。
+    image_url: https://images.ctfassets.net/kftzwdyauwt9/cut4wyUCuBENXfd5CSI7Z/d934ffb49d8b39abea0bc33bb1a5b916/Hero_Art_Card_SEO_1x1.jpg?fm=webp&q=90&w=3840
+    image_alt: OpenAI GPT-5.5 official product artwork.
+    image_source_url: https://openai.com/index/introducing-gpt-5-5/
     watch_points:
       - API 侧大规模开放节奏和价格是否会影响第三方 agent 平台选型。
       - Codex 中的上下文窗口、工具权限和安全策略是否与宣传能力一致。
@@ -126,7 +128,7 @@ items:
     why_it_matters: 这类中等规模开源权重模型会改变本地 coding agent 和私有部署的成本曲线，尤其适合不想把代码库上下文完全交给闭源云模型的团队。
     background: Qwen 系列一直是中文和多语言开源模型生态的重要来源；3.6 系列开始更明确面向 coding agent 和工具调用场景。
     details: 模型页列出 27B 参数、vision encoder、SGLang/vLLM/KTransformers 等 serving 路径，以及 Qwen-Agent / MCP 配置示例。
-    impact: 对开发者和中小团队而言，Qwen3.6-27B 提供了一个可在自有基础设施上跑 agentic coding 的候选模型，降低了对闭源大模型 API 的单点依赖。
+    impact: 对开发者和中小团队而言，Qwen3.6-27B 提供了一个可在自有基础设施上跑 agentic coding 的可选模型，降低了对闭源大模型 API 的单点依赖。
     watch_points:
       - 真实代码库任务中对 Claude / GPT / DeepSeek 的稳定性差距。
       - 量化版本在 24GB/48GB 消费级 GPU 上的可用体验。
@@ -152,6 +154,9 @@ items:
     background: DeepSeek R1 之后，市场一直等待其下一代基础模型；V4 系列同时牵动开源生态、API 成本和国产算力叙事。
     details: 官方 changelog 明确列出新模型 ID 和旧模型名停用时间，给已经集成 DeepSeek API 的服务留下三个月迁移期。
     impact: 对使用 DeepSeek 的产品和 agent 平台来说，接下来需要测试新模型的上下文、工具调用、成本和兼容性，并避免旧模型名停用造成线上中断。
+    image_url: https://cdn.deepseek.com/logo.png?x-image-process=image%2Fresize%2Cw_1920
+    image_alt: DeepSeek official logo from the DeepSeek homepage.
+    image_source_url: https://www.deepseek.com/en/
     watch_points:
       - V4-Pro / V4-Flash 的真实 API 稳定性、限流和价格。
       - 与 Huawei Ascend、国产推理栈和国际 GPU 供应链的关系。

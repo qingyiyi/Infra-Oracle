@@ -45,38 +45,38 @@ const weekRange = getRadarWeekRange(entry);
     <div class="hero-copy">
       <div class="cluster">
         <Badge tone="accent">{entry.data.week_label}</Badge>
-        <Badge tone="success">{entry.data.editorial_status}</Badge>
+        <Badge tone="success">本期周报</Badge>
         <Badge>{weekRange}</Badge>
         <Badge>{formatRadarDate(entry.data.published_at)}</Badge>
       </div>
       <div class="stack">
-        <p class="eyebrow">Weekly AI Infra Radar / Issue Detail</p>
+        <p class="eyebrow">Weekly AI Infra Radar / 本期速读</p>
         <h1 class="title-display">{entry.data.title}</h1>
         <p class="body-lg">{entry.data.summary}</p>
       </div>
       <div class="action-row">
         <Button href={withBase(siteRoutes.radar)} variant="secondary">返回 Radar 列表</Button>
-        <Button href="#issue-items" variant="ghost">跳到条目列表</Button>
+        <Button href="#issue-items" variant="ghost">直接看重点</Button>
       </div>
     </div>
 
     <div class="page-intro__rail">
       <Panel tone="accent" padding="lg">
-        <p class="mono-label">Issue metadata</p>
+        <p class="mono-label">Reading note</p>
         <div class="detail-list">
           <div>
-            <p class="mono-label">Editor</p>
-            <p class="body-sm">{entry.data.editor_name}</p>
+            <p class="mono-label">本期主线</p>
+            <p class="body-sm">{entry.data.hero_note}</p>
           </div>
           <div>
-            <p class="mono-label">Reviewed by</p>
+            <p class="mono-label">整理时间</p>
             <p class="body-sm">
-              {entry.data.reviewed_by ?? "Pending"}
-              {reviewedDate && ` · ${reviewedDate}`}
+              {formatRadarDate(entry.data.published_at)}
+              {reviewedDate && ` · 更新于 ${reviewedDate}`}
             </p>
           </div>
           <div>
-            <p class="mono-label">Topics</p>
+            <p class="mono-label">关键词</p>
             <div class="cluster">
               {entry.data.topics.map((topic) => (
                 <Badge>{topic}</Badge>
@@ -90,9 +90,9 @@ const weekRange = getRadarWeekRange(entry);
 
   <section class="section">
     <SectionHeader
-      eyebrow="Editorial Intro"
+      eyebrow="Quick Read"
       title={entry.data.hero_note}
-      description="单期页面同时承接 issue 级导语和 item 级结构化条目，避免首页承担过多阅读负担。"
+      description="这一段适合先扫一遍：知道本周热闹在哪，再决定哪些来源值得点开。"
     />
 
     <div class="split-grid">
@@ -103,19 +103,19 @@ const weekRange = getRadarWeekRange(entry);
       </Panel>
 
       <Panel as="article" padding="lg">
-        <h3 class="title-3">Publishing boundary</h3>
+        <h3 class="title-3">读前小抄</h3>
         <ul class="surface-list">
           <li>
-            <p class="mono-label">Published only</p>
-            <p class="body-sm">当前 detail route 只为 `published` issue 生成，不把候选或审核中内容暴露到前台。</p>
+            <p class="mono-label">先抓主线</p>
+            <p class="body-sm">这期通常只有一两条真正的主线，其余新闻都在帮它补上下文。</p>
           </li>
           <li>
-            <p class="mono-label">Human-reviewed</p>
-            <p class="body-sm">条目进入 issue 前必须经过来源核对、摘要压缩和“为什么重要”补全。</p>
+            <p class="mono-label">再看影响</p>
+            <p class="body-sm">别只看发布了什么，更要看它会不会改模型选择、云采购、成本或安全流程。</p>
           </li>
           <li>
-            <p class="mono-label">Static-first output</p>
-            <p class="body-sm">当前仍然是 Markdown + 结构化字段发布，不依赖后端编辑后台。</p>
+            <p class="mono-label">最后留个问号</p>
+            <p class="body-sm">每条都留了观察点，方便下周回来看看谁兑现了，谁只是声音很大。</p>
           </li>
         </ul>
       </Panel>
@@ -124,9 +124,9 @@ const weekRange = getRadarWeekRange(entry);
 
   <section class="section" id="issue-items">
     <SectionHeader
-      eyebrow="Radar Items"
-      title={`${entry.data.items.length} structured signals in this issue`}
-      description="每条 item 都要同时回答来源、摘要、为什么重要和可信度，便于快速扫描和后续归档。"
+      eyebrow="Radar Picks"
+      title={`${entry.data.items.length} 条本期重点`}
+      description="每条都尽量回答三个问题：发生了什么、为什么重要、接下来盯哪里。"
     />
 
     <div class="issue-list">
@@ -136,7 +136,7 @@ const weekRange = getRadarWeekRange(entry);
             <Badge tone="accent">{radarCategoryLabels[item.category]}</Badge>
             <Badge>{radarSourceTypeLabels[item.source_type]}</Badge>
             <Badge tone={item.credibility === "high" ? "success" : item.credibility === "medium" ? "warning" : "danger"}>
-              credibility: {item.credibility}
+              可信度 {item.credibility}
             </Badge>
           </div>
           <div class="radar-item-layout">
@@ -158,19 +158,19 @@ const weekRange = getRadarWeekRange(entry);
           </div>
           <div class="analysis-grid">
             <Panel tone="subtle">
-              <p class="mono-label">Background</p>
+              <p class="mono-label">背景</p>
               <p class="body-sm">{item.background ?? item.summary}</p>
             </Panel>
             <Panel tone="subtle">
-              <p class="mono-label">Details</p>
+              <p class="mono-label">发生了什么</p>
               <p class="body-sm">{item.details ?? item.why_it_matters}</p>
             </Panel>
             <Panel tone="subtle">
-              <p class="mono-label">Impact</p>
+              <p class="mono-label">为什么值得看</p>
               <p class="body-sm">{item.impact ?? item.why_it_matters}</p>
             </Panel>
             <Panel tone="subtle">
-              <p class="mono-label">Watch Points</p>
+              <p class="mono-label">继续观察</p>
               {item.watch_points.length > 0 ? (
                 <ul class="compact-list">
                   {item.watch_points.map((point) => (
@@ -196,23 +196,22 @@ const weekRange = getRadarWeekRange(entry);
             >
               查看来源
             </a>
-            <span class="caption">review: {item.review_status}</span>
-            <span class="caption">importance: {item.importance}</span>
+            <span class="caption">重要性：{item.importance}</span>
           </div>
           {item.image_source_url && (
             <p class="caption">
-              Image source: <a href={item.image_source_url} target="_blank" rel="noreferrer" class="source-link">official / licensed source</a>
+              图片来源：<a href={item.image_source_url} target="_blank" rel="noreferrer" class="source-link">官方或公开来源</a>
             </p>
           )}
           {item.review_notes && (
-            <p class="caption">Review note: {item.review_notes}</p>
+            <p class="caption">补充说明：{item.review_notes}</p>
           )}
         </Panel>
       ))}
     </div>
 
     <div class="action-row">
-      <Button href={getRadarIssuePath(entry.slug)} variant="ghost">当前期号链接</Button>
+      <Button href={getRadarIssuePath(entry.slug)} variant="ghost">复制本期入口</Button>
       <Button href={withBase(siteRoutes.radar)} variant="secondary">查看全部期号</Button>
     </div>
   </section>

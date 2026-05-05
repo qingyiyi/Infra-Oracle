@@ -23,47 +23,47 @@ const latestWeekRange = latestRadar ? getRadarWeekRange(latestRadar) : null;
 <BaseLayout
   active="radar"
   title="Radar | GitHub Page / AI Infra & Codex Lab"
-  description="Weekly AI Infra Radar 的当前期号、边界和后续归档方向。"
+  description="Weekly AI Infra Radar 的本周速读和往期归档。"
 >
   <section class="section page-intro">
     <div class="hero-copy">
       <div class="cluster">
         <Badge tone="accent">Radar</Badge>
-        <Badge tone="success">human-reviewed</Badge>
+        <Badge tone="success">weekly digest</Badge>
         {latestDate && <Badge>{latestDate}</Badge>}
       </div>
       <div class="stack">
         <p class="eyebrow">Weekly AI Infra Radar</p>
-        <h1 class="title-display">已发布 issue 的归档面，候选与审查流不直接暴露到前台。</h1>
+        <h1 class="title-display">每周给 AI Infra 圈做一次降噪。</h1>
         <p class="body-lg">
-          这里承接已发布期号列表、当前期号入口和 Radar 的结构化阅读方式。自动抓取最多只生成候选，真正公开的内容仍然以人工审查后的 issue 为准。
+          模型发布、云厂商动作、GPU 供应、agent 工具和少量会影响算力账单的国际新闻。我们不追每一条热搜，只追那些下周可能还会影响你的东西。
         </p>
       </div>
       <div class="action-row">
         <Button href={withBase(siteRoutes.home)} variant="secondary">返回首页</Button>
-        <Button href="#published-issues" variant="ghost">查看已发布期号</Button>
+        <Button href="#published-issues" variant="ghost">翻往期周报</Button>
       </div>
     </div>
 
     <div class="page-intro__rail">
       <Panel tone="accent" padding="lg">
-        <p class="mono-label">Current surface</p>
-        <h2 class="title-2">Published issues only, human review required, archive-ready.</h2>
+        <p class="mono-label">This week</p>
+        <h2 class="title-2">{latestRadar ? latestRadar.data.hero_note : "先等一等，本周信号还在路上。"}</h2>
         <p class="body-sm">
-          首版重点是把 issue 级元数据、item 级结构化字段和发布边界固定下来，为后续归档、筛选和候选流扩展留出空间。
+          如果一条新闻只适合转发但不适合做决定，它大概率不会在这里待太久。这里偏爱能改变模型选择、云架构和工程节奏的信号。
         </p>
       </Panel>
       <div class="stack-grid">
         <Panel tone="subtle">
           <div class="metric">
             <span class="metric__value">{radarEntries.length}</span>
-            <span class="metric__label">published issues in the prototype archive</span>
+            <span class="metric__label">期周报可回看</span>
           </div>
         </Panel>
         <Panel tone="subtle">
           <div class="metric">
             <span class="metric__value">{latestRadar ? latestRadar.data.items.length : 0}</span>
-            <span class="metric__label">structured items in the latest issue</span>
+            <span class="metric__label">条本期重点</span>
           </div>
         </Panel>
       </div>
@@ -72,9 +72,9 @@ const latestWeekRange = latestRadar ? getRadarWeekRange(latestRadar) : null;
 
   <section class="section" id="current-issue">
     <SectionHeader
-      eyebrow="Latest Published Issue"
-      title={latestRadar ? latestRadar.data.title : "No published issue yet"}
-      description="首页只拿最新的 `published` issue 做预览；Radar 主页则负责把期号归档与单期入口组织清楚。"
+      eyebrow="Latest Dispatch"
+      title={latestRadar ? latestRadar.data.title : "本周还在加载中"}
+      description="先看这一期的主线，再决定要不要点进每条来源细读。"
     />
 
     <div class="split-grid">
@@ -87,7 +87,7 @@ const latestWeekRange = latestRadar ? getRadarWeekRange(latestRadar) : null;
         <p class="body-md">
           {latestRadar
             ? latestRadar.data.summary
-            : "当内容目录扩展后，这里会承接期号级元数据、编辑导语和主题说明。"}
+            : "这一周还没有整理好的周报，先喝口水等一下。"}
         </p>
         {latestRadar && (
           <div class="cluster">
@@ -97,7 +97,7 @@ const latestWeekRange = latestRadar ? getRadarWeekRange(latestRadar) : null;
           </div>
         )}
         <Panel tone="subtle">
-          <p class="mono-label">Editorial note</p>
+          <p class="mono-label">Why this week matters</p>
           <p class="body-sm">
             {latestRadar
               ? latestRadar.data.hero_note
@@ -116,25 +116,25 @@ const latestWeekRange = latestRadar ? getRadarWeekRange(latestRadar) : null;
         )}
         {latestRadar && (
           <div class="action-row">
-            <Button href={getRadarIssuePath(latestRadar.slug)} variant="primary">进入当前期号</Button>
+            <Button href={getRadarIssuePath(latestRadar.slug)} variant="primary">打开本期全文</Button>
           </div>
         )}
       </Panel>
 
       <Panel as="article" padding="lg">
-        <h3 class="title-3">Publication boundary</h3>
+        <h3 class="title-3">本周怎么读</h3>
         <ul class="surface-list">
           <li>
-            <p class="mono-label">Human review required</p>
-            <p class="body-sm">自动抓取最多只能生成候选，不会直接发布到页面。</p>
+            <p class="mono-label">先看模型</p>
+            <p class="body-sm">谁发布了新模型、谁把模型塞进云市场，通常决定下个月工具链怎么变。</p>
           </li>
           <li>
-            <p class="mono-label">Static-first issue model</p>
-            <p class="body-sm">当前以 Markdown issue + item 数组为主，候选池单独维护，不和公开 issue 混放。</p>
+            <p class="mono-label">再看算力</p>
+            <p class="body-sm">GPU、TPU、推理框架和价格信号，最后都会变成账单、延迟和部署选择。</p>
           </li>
           <li>
-            <p class="mono-label">Latest issue rule</p>
-            <p class="body-sm">首页和 Radar 入口统一读取最新的 `published` issue，而不是隐式依赖文件名或审核中内容。</p>
+            <p class="mono-label">最后看治理</p>
+            <p class="body-sm">agent 能不能进企业，往往不是看它多聪明，而是看谁能审计、停用和追责。</p>
           </li>
         </ul>
       </Panel>
@@ -143,9 +143,9 @@ const latestWeekRange = latestRadar ? getRadarWeekRange(latestRadar) : null;
 
   <section class="section" id="published-issues">
     <SectionHeader
-      eyebrow="Published Archive"
-      title="Every published issue gets a stable detail route."
-      description="列表页承接期号归档，detail route 承接 issue 导语和 item-level 结构化条目。"
+      eyebrow="Archive"
+      title="往期周报，适合翻旧账。"
+      description="AI 圈的记忆只有七秒，归档负责把上周的热闹留到下次复盘。"
     />
 
     <div class="archive-grid">
@@ -165,10 +165,10 @@ const latestWeekRange = latestRadar ? getRadarWeekRange(latestRadar) : null;
           </div>
           <div class="callout-row issue-card__meta">
             <span>{entry.data.editor_name}</span>
-            <span>{entry.data.items.length} items</span>
+            <span>{entry.data.items.length} 条重点</span>
           </div>
           <div class="action-row">
-            <Button href={getRadarIssuePath(entry.slug)} variant="secondary">查看单期详情</Button>
+            <Button href={getRadarIssuePath(entry.slug)} variant="secondary">读这一期</Button>
           </div>
         </Panel>
       ))}
