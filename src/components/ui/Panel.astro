@@ -4,6 +4,7 @@ interface Props {
   tone?: "default" | "accent" | "subtle";
   padding?: "md" | "lg";
   class?: string;
+  [key: string]: unknown;
 }
 
 const {
@@ -11,11 +12,12 @@ const {
   tone = "default",
   padding = "md",
   class: className = "",
+  ...attrs
 } = Astro.props as Props;
 
 const Tag = as;
 ---
 
-<Tag class:list={["panel", `panel--${tone}`, `panel--${padding}`, className]}>
+<Tag {...attrs} class:list={["panel", `panel--${tone}`, `panel--${padding}`, className]}>
   <slot />
 </Tag>
