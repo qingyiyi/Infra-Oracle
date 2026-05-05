@@ -1,0 +1,202 @@
+---
+import Badge from "../ui/Badge.astro";
+import Panel from "../ui/Panel.astro";
+import { fortuneEntries, getFortuneForDate, getLocalDateKey } from "../../lib/fortune";
+
+const fallbackDate = new Date();
+const fallbackDateKey = getLocalDateKey(fallbackDate);
+const fallbackFortune = getFortuneForDate(fallbackDateKey);
+const fallbackDateLabel = new Intl.DateTimeFormat("zh-CN", {
+  month: "2-digit",
+  day: "2-digit",
+  weekday: "short",
+}).format(fallbackDate);
+const fortunePayload = JSON.stringify(fortuneEntries).replace(/</g, "\\u003c");
+---
+
+<Panel as="aside" tone="subtle" padding="lg" class="fortune-widget" data-fortune-widget>
+  <div class="fortune-widget__header">
+    <div class="fortune-widget__icon" aria-hidden="true">
+      <svg viewBox="0 0 24 24" role="img">
+        <path d="M12 3v3" />
+        <path d="M12 18v3" />
+        <path d="m5.64 5.64 2.12 2.12" />
+        <path d="m16.24 16.24 2.12 2.12" />
+        <path d="M3 12h3" />
+        <path d="M18 12h3" />
+        <path d="m5.64 18.36 2.12-2.12" />
+        <path d="m16.24 7.76 2.12-2.12" />
+        <circle cx="12" cy="12" r="3.2" />
+      </svg>
+    </div>
+    <div class="fortune-widget__title">
+      <p class="mono-label">Daily Fortune</p>
+      <h2 class="title-3">今日轻量签面</h2>
+    </div>
+    <Badge tone="warning" class="fortune-widget__date">
+      <span data-fortune-date>{fallbackDateLabel}</span>
+    </Badge>
+  </div>
+
+  <div class="fortune-widget__hero">
+    <div class="fortune-widget__rank">
+      <span data-fortune-tier>{fallbackFortune.tier}</span>
+    </div>
+    <div class="stack">
+      <div class="cluster">
+        <Badge tone="accent"><span data-fortune-theme>{fallbackFortune.theme}</span></Badge>
+        <Badge>每日固定</Badge>
+      </div>
+      <h3 class="title-3" data-fortune-headline>{fallbackFortune.headline}</h3>
+      <p class="body-sm" data-fortune-summary>{fallbackFortune.summary}</p>
+    </div>
+  </div>
+
+  <div class="fortune-widget__meta-grid">
+    <div class="fortune-widget__meta">
+      <p class="mono-label">Energy</p>
+      <div class="fortune-energy" aria-label={`能量值 ${fallbackFortune.energy}`}>
+        <span style={`width: ${fallbackFortune.energy}%`} data-fortune-energy-bar></span>
+      </div>
+      <p class="body-sm"><span data-fortune-energy>{fallbackFortune.energy}</span>/100</p>
+    </div>
+    <div class="fortune-widget__meta">
+      <p class="mono-label">Lucky color</p>
+      <div class="fortune-color">
+        <span
+          class="fortune-color__swatch"
+          style={`background: ${fallbackFortune.lucky_color.value}`}
+          data-fortune-color-swatch
+          aria-hidden="true"
+        ></span>
+        <span>
+          <span data-fortune-color-name>{fallbackFortune.lucky_color.name}</span>
+          <small data-fortune-color-value>{fallbackFortune.lucky_color.value}</small>
+        </span>
+      </div>
+    </div>
+    <div class="fortune-widget__meta">
+      <p class="mono-label">Lucky token</p>
+      <p class="fortune-token" data-fortune-symbol>{fallbackFortune.lucky_symbol}</p>
+    </div>
+  </div>
+
+  <div class="fortune-widget__list-grid">
+    <div class="fortune-widget__list fortune-widget__list--do">
+      <p class="mono-label">宜</p>
+      <ul>
+        <li data-fortune-do>{fallbackFortune.do[0]}</li>
+        <li data-fortune-do>{fallbackFortune.do[1]}</li>
+      </ul>
+    </div>
+    <div class="fortune-widget__list fortune-widget__list--dont">
+      <p class="mono-label">忌</p>
+      <ul>
+        <li data-fortune-dont>{fallbackFortune.dont[0]}</li>
+        <li data-fortune-dont>{fallbackFortune.dont[1]}</li>
+      </ul>
+    </div>
+  </div>
+
+  <figure class="fortune-quote">
+    <blockquote data-fortune-quote>{fallbackFortune.quote.text}</blockquote>
+    <figcaption>
+      <a href={fallbackFortune.quote.source_url} rel="noreferrer" target="_blank" data-fortune-source>
+        <span data-fortune-author>{fallbackFortune.quote.author}</span> ·
+        <span data-fortune-source-title>{fallbackFortune.quote.source}</span>
+      </a>
+    </figcaption>
+  </figure>
+
+  <p class="caption fortune-widget__disclaimer">
+    <span data-fortune-disclaimer>{fallbackFortune.disclaimer}</span> 每日按本地日期固定显示。
+  </p>
+
+  <script is:inline type="application/json" data-fortune-data set:html={fortunePayload}></script>
+  <script is:inline>
+    (() => {
+      const widget = document.querySelector("[data-fortune-widget]");
+      const dataNode = widget?.querySelector("[data-fortune-data]");
+
+      if (!widget || !dataNode) {
+        return;
+      }
+
+      let fortunes = [];
+
+      try {
+        fortunes = JSON.parse(dataNode.textContent || "[]");
+      } catch {
+        return;
+      }
+
+      if (!Array.isArray(fortunes) || fortunes.length === 0) {
+        return;
+      }
+
+      const localDate = new Date();
+      const dateKey = [
+        localDate.getFullYear(),
+        String(localDate.getMonth() + 1).padStart(2, "0"),
+        String(localDate.getDate()).padStart(2, "0"),
+      ].join("-");
+
+      let hash = 2166136261;
+
+      for (let index = 0; index < dateKey.length; index += 1) {
+        hash ^= dateKey.charCodeAt(index);
+        hash = Math.imul(hash, 16777619);
+      }
+
+      const fortune = fortunes[(hash >>> 0) % fortunes.length] || fortunes[0];
+      const dateLabel = new Intl.DateTimeFormat("zh-CN", {
+        month: "2-digit",
+        day: "2-digit",
+        weekday: "short",
+      }).format(localDate);
+      const setText = (selector, value) => {
+        const element = widget.querySelector(selector);
+        if (element) {
+          element.textContent = value || "";
+        }
+      };
+      const setList = (selector, items) => {
+        widget.querySelectorAll(selector).forEach((element, index) => {
+          element.textContent = items?.[index] || "";
+        });
+      };
+
+      setText("[data-fortune-date]", dateLabel);
+      setText("[data-fortune-tier]", fortune.tier);
+      setText("[data-fortune-theme]", fortune.theme);
+      setText("[data-fortune-headline]", fortune.headline);
+      setText("[data-fortune-summary]", fortune.summary);
+      setText("[data-fortune-energy]", String(fortune.energy));
+      setText("[data-fortune-color-name]", fortune.lucky_color?.name);
+      setText("[data-fortune-color-value]", fortune.lucky_color?.value);
+      setText("[data-fortune-symbol]", fortune.lucky_symbol);
+      setText("[data-fortune-quote]", fortune.quote?.text);
+      setText("[data-fortune-author]", fortune.quote?.author);
+      setText("[data-fortune-source-title]", fortune.quote?.source);
+      setText("[data-fortune-disclaimer]", fortune.disclaimer);
+      setList("[data-fortune-do]", fortune.do);
+      setList("[data-fortune-dont]", fortune.dont);
+
+      const energyBar = widget.querySelector("[data-fortune-energy-bar]");
+      const colorSwatch = widget.querySelector("[data-fortune-color-swatch]");
+      const sourceLink = widget.querySelector("[data-fortune-source]");
+
+      if (energyBar) {
+        energyBar.style.width = `${Number(fortune.energy) || 0}%`;
+      }
+
+      if (colorSwatch && fortune.lucky_color?.value) {
+        colorSwatch.style.background = fortune.lucky_color.value;
+      }
+
+      if (sourceLink && fortune.quote?.source_url) {
+        sourceLink.href = fortune.quote.source_url;
+      }
+    })();
+  </script>
+</Panel>

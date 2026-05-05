@@ -1,15 +1,1351 @@
 - id: fortune-001
   tier: 吉
-  weight: 30
-  headline: 今天适合稳定推进
-  summary: 适合做确定性高、回报清晰的工作。
+  tone: calm
+  theme: 稳定推进
+  headline: 今天适合把一件小事做完整
+  summary: 把注意力放回手边的确定任务，节奏会比预期更顺。
   do:
-    - 整理 README
-    - 跑 benchmark
+    - 整理桌面和待办
+    - 给长期项目补一段说明
   dont:
-    - 周五深夜重构核心接口
-    - 把 API Key 放前端
-  tags:
-    - coding
-    - infra
+    - 临时开启三条新战线
+    - 用焦虑替代优先级
+  lucky_color:
+    name: 晨雾蓝
+    value: "#8fbdd8"
+  lucky_symbol: 干净的水杯
+  energy: 78
+  quote:
+    text: 不急于到达的人，也不会丢掉道路。
+    author: 老子
+    source: 《道德经》
+    source_url: "https://ctext.org/dao-de-jing"
+    note: 据第二十四章意译
+  tags: [focus, life]
+  disclaimer: 仅供娱乐，不作为真实决策依据。
+
+- id: fortune-002
+  tier: 小吉
+  tone: soft
+  theme: 慢速清理
+  headline: 今天适合把旧东西放回原位
+  summary: 先清理一块小区域，心里的噪声也会跟着下降。
+  do:
+    - 删除过期文件
+    - 把常用文档重新命名
+  dont:
+    - 一边收拾一边买新东西
+    - 在疲惫时做长期承诺
+  lucky_color:
+    name: 鼠尾草绿
+    value: "#9ab89a"
+  lucky_symbol: 标签纸
+  energy: 64
+  quote:
+    text: 天地自有大美，只是不多说。
+    author: 庄子
+    source: 《庄子·知北游》
+    source_url: "https://ctext.org/zhuangzi"
+    note: 据原文意译
+  tags: [home, reset]
+  disclaimer: 仅供娱乐，不作为真实决策依据。
+
+- id: fortune-003
+  tier: 吉
+  tone: bright
+  theme: 轻量社交
+  headline: 今天适合主动发出一个温和邀请
+  summary: 不必隆重，约一杯咖啡、一次散步，关系就会有新的空气。
+  do:
+    - 问候一位很久没联系的人
+    - 把感谢说具体一点
+  dont:
+    - 用玩笑遮住真实需求
+    - 在群聊里争最后一句
+  lucky_color:
+    name: 杏仁白
+    value: "#ead9be"
+  lucky_symbol: 明信片
+  energy: 72
+  quote:
+    text: 与可信的人同行，路会显得宽一些。
+    author: 孔子
+    source: 《论语》
+    source_url: "https://ctext.org/analects"
+    note: 据益者三友相关章句意译
+  tags: [social, gentle]
+  disclaimer: 仅供娱乐，不作为真实决策依据。
+
+- id: fortune-004
+  tier: 平
+  tone: clear
+  theme: 减少输入
+  headline: 今天适合少刷一点，多读一页
+  summary: 信息会很多，真正能留下来的只有被你认真处理过的几条。
+  do:
+    - 读完一篇长文
+    - 给一条重要信息做摘记
+  dont:
+    - 在通知里寻找方向
+    - 睡前继续刷新热点
+  lucky_color:
+    name: 墨灰
+    value: "#6f747b"
+  lucky_symbol: 书签
+  energy: 58
+  quote:
+    text: 心能守住自己，外界就不容易夺走你。
+    author: 马可·奥勒留
+    source: Meditations
+    source_url: "https://www.gutenberg.org/ebooks/2680"
+    note: 据《沉思录》意译
+  tags: [reading, attention]
+  disclaimer: 仅供娱乐，不作为真实决策依据。
+
+- id: fortune-005
+  tier: 小吉
+  tone: steady
+  theme: 边界感
+  headline: 今天适合把一句“不方便”说得轻一点
+  summary: 清楚的边界不是冷漠，它能让后面的合作更省力。
+  do:
+    - 给请求补上时间范围
+    - 把不可做事项提前说明
+  dont:
+    - 用沉默默认接受
+    - 把所有临时事都算成责任
+  lucky_color:
+    name: 岩石灰
+    value: "#8d8b84"
+  lucky_symbol: 门把手
+  energy: 69
+  quote:
+    text: 真正属于你的，是你如何回应。
+    author: 爱比克泰德
+    source: Enchiridion
+    source_url: "https://www.gutenberg.org/ebooks/45109"
+    note: 据《手册》开篇意译
+  tags: [boundary, work]
+  disclaimer: 仅供娱乐，不作为真实决策依据。
+
+- id: fortune-006
+  tier: 吉
+  tone: warm
+  theme: 料理自己
+  headline: 今天适合好好吃一顿热饭
+  summary: 身体被照顾到以后，很多复杂问题会先降一级难度。
+  do:
+    - 安排一顿不赶时间的饭
+    - 提前把水杯倒满
+  dont:
+    - 用零食顶替正餐
+    - 带着低血糖做重要判断
+  lucky_color:
+    name: 南瓜橙
+    value: "#d89053"
+  lucky_symbol: 汤匙
+  energy: 74
+  quote:
+    text: 简朴不是亏待自己，而是把需要看清。
+    author: 塞涅卡
+    source: Moral Letters to Lucilius
+    source_url: "https://www.gutenberg.org/ebooks/3794"
+    note: 据《致卢基利乌斯书信》意译
+  tags: [meal, care]
+  disclaimer: 仅供娱乐，不作为真实决策依据。
+
+- id: fortune-007
+  tier: 大吉
+  tone: open
+  theme: 深度工作
+  headline: 今天适合留一段不被打断的时间
+  summary: 把最难的部分提前处理，下午会轻松很多。
+  do:
+    - 关掉一小时通知
+    - 先做最耗脑的一小节
+  dont:
+    - 把清单排成展览
+    - 在开始前反复换工具
+  lucky_color:
+    name: 钴蓝
+    value: "#4f72c2"
+  lucky_symbol: 计时器
+  energy: 86
+  quote:
+    text: 灵魂需要转向，才看得见更清楚的光。
+    author: 柏拉图
+    source: Republic
+    source_url: "https://www.gutenberg.org/ebooks/1497"
+    note: 据洞穴寓言意译
+  tags: [deep-work, craft]
+  disclaimer: 仅供娱乐，不作为真实决策依据。
+
+- id: fortune-008
+  tier: 小吉
+  tone: tidy
+  theme: 修补关系
+  headline: 今天适合把一个误会说开
+  summary: 语气放低一点，事实讲清一点，事情就不会继续发酵。
+  do:
+    - 复述对方真正担心的点
+    - 先承认自己没说清的地方
+  dont:
+    - 把道歉写成辩护词
+    - 翻出无关旧账
+  lucky_color:
+    name: 薄荷绿
+    value: "#8fd3b0"
+  lucky_symbol: 白纸
+  energy: 67
+  quote:
+    text: 友善的习惯，会慢慢变成品格。
+    author: 亚里士多德
+    source: Nicomachean Ethics
+    source_url: "https://www.gutenberg.org/ebooks/8438"
+    note: 据德性与习惯论述意译
+  tags: [repair, relation]
+  disclaimer: 仅供娱乐，不作为真实决策依据。
+
+- id: fortune-009
+  tier: 平
+  tone: quiet
+  theme: 接受变化
+  headline: 今天适合承认计划已经变了
+  summary: 别把旧路线当成面子，换一条路并不代表前面白走。
+  do:
+    - 重写今天的前三件事
+    - 保留一个可撤回选项
+  dont:
+    - 继续维护无效安排
+    - 把变化都解释成失败
+  lucky_color:
+    name: 河石青
+    value: "#7aa6a2"
+  lucky_symbol: 折叠地图
+  energy: 61
+  quote:
+    text: 万物都在流动，抓太紧反而看不清。
+    author: 赫拉克利特
+    source: Fragments
+    source_url: "https://en.wikisource.org/wiki/Fragments_of_Heraclitus"
+    note: 据流变思想意译
+  tags: [change, planning]
+  disclaimer: 仅供娱乐，不作为真实决策依据。
+
+- id: fortune-010
+  tier: 吉
+  tone: reflective
+  theme: 看电影
+  headline: 今天适合看一部不太吵的电影
+  summary: 让注意力跟着一个完整故事走完，脑子会重新恢复叙事能力。
+  do:
+    - 选一部片长适中的老电影
+    - 看完写下一个画面
+  dont:
+    - 边看边刷短视频
+    - 把放松也做成任务
+  lucky_color:
+    name: 银幕白
+    value: "#d7d5ce"
+  lucky_symbol: 电影票根
+  energy: 70
+  quote:
+    text: 故事让漂泊的人暂时找到岸。
+    author: 荷马
+    source: The Odyssey
+    source_url: "https://www.gutenberg.org/ebooks/1727"
+    note: 据《奥德赛》返乡主题意译
+  tags: [movie, rest]
+  disclaimer: 仅供娱乐，不作为真实决策依据。
+
+- id: fortune-011
+  tier: 小吉
+  tone: lucid
+  theme: 轻断舍离
+  headline: 今天适合清掉一个订阅
+  summary: 把入口减少，注意力自然会变得更贵。
+  do:
+    - 取消一个不再需要的推送
+    - 关闭一个自动续费提醒
+  dont:
+    - 因为曾经有用就一直保留
+    - 为收藏夹继续收藏收藏夹
+  lucky_color:
+    name: 雾紫
+    value: "#a59bc5"
+  lucky_symbol: 空盒子
+  energy: 63
+  quote:
+    text: 简单的生活，让思想有地方坐下。
+    author: 梭罗
+    source: Walden
+    source_url: "https://www.gutenberg.org/ebooks/205"
+    note: 据《瓦尔登湖》简朴生活主题意译
+  tags: [declutter, attention]
+  disclaimer: 仅供娱乐，不作为真实决策依据。
+
+- id: fortune-012
+  tier: 吉
+  tone: brave
+  theme: 小型开始
+  headline: 今天适合先做一个很小的版本
+  summary: 小到不好意思也没关系，能运行的东西会带来下一步。
+  do:
+    - 写下最小交付物
+    - 在 30 分钟内做出草稿
+  dont:
+    - 等灵感完整出现
+    - 一开始就追求体面
+  lucky_color:
+    name: 野花黄
+    value: "#e3c85f"
+  lucky_symbol: 铅笔头
+  energy: 82
+  quote:
+    text: 自信不是喧哗，而是敢于听见自己的声音。
+    author: 爱默生
+    source: Self-Reliance
+    source_url: "https://www.gutenberg.org/ebooks/16643"
+    note: 据《自立》意译
+  tags: [start, courage]
+  disclaimer: 仅供娱乐，不作为真实决策依据。
+
+- id: fortune-013
+  tier: 平
+  tone: measured
+  theme: 少说多听
+  headline: 今天适合把话留到第二轮
+  summary: 第一反应未必错，但第二轮表达通常更有分寸。
+  do:
+    - 先问一个澄清问题
+    - 把长回复压成三句
+  dont:
+    - 在情绪最高点发送
+    - 替别人补完动机
+  lucky_color:
+    name: 茶褐
+    value: "#9a7b5d"
+  lucky_symbol: 陶杯
+  energy: 56
+  quote:
+    text: 语言能照亮，也能遮蔽。
+    author: 莎士比亚
+    source: Hamlet
+    source_url: "https://www.gutenberg.org/ebooks/1524"
+    note: 据戏剧中语言与行动张力意译
+  tags: [listen, speech]
+  disclaimer: 仅供娱乐，不作为真实决策依据。
+
+- id: fortune-014
+  tier: 吉
+  tone: nimble
+  theme: 路线调整
+  headline: 今天适合换一种更轻的做法
+  summary: 目标可以不变，路径可以更灵活。
+  do:
+    - 找一个不用加班的方案
+    - 把流程中的一步删掉
+  dont:
+    - 为证明努力而增加复杂度
+    - 把绕路当成坚持
+  lucky_color:
+    name: 海盐蓝
+    value: "#79a9c7"
+  lucky_symbol: 轻便帆布包
+  energy: 76
+  quote:
+    text: 明智的人会随风调整帆，而不是责怪风。
+    author: 荷马
+    source: The Iliad
+    source_url: "https://www.gutenberg.org/ebooks/2199"
+    note: 据史诗航行与命运主题意译
+  tags: [adapt, simplify]
+  disclaimer: 仅供娱乐，不作为真实决策依据。
+
+- id: fortune-015
+  tier: 小吉
+  tone: restful
+  theme: 早点休息
+  headline: 今天适合把睡眠排进日程
+  summary: 很多问题不是要立刻想通，而是要明天用清醒的脑子再看。
+  do:
+    - 睡前半小时离开屏幕
+    - 把明早第一件事写下来
+  dont:
+    - 用夜晚惩罚白天
+    - 在床上继续处理冲突
+  lucky_color:
+    name: 深靛
+    value: "#3f4b7a"
+  lucky_symbol: 床头灯
+  energy: 60
+  quote:
+    text: 安静不是空无，而是心重新聚拢。
+    author: 华兹华斯
+    source: Lyrical Ballads
+    source_url: "https://www.gutenberg.org/ebooks/9622"
+    note: 据自然与宁静主题意译
+  tags: [sleep, recover]
+  disclaimer: 仅供娱乐，不作为真实决策依据。
+
+- id: fortune-016
+  tier: 吉
+  tone: curious
+  theme: 学一点新东西
+  headline: 今天适合打开一个陌生但不沉重的话题
+  summary: 新知识不用马上有用，先让大脑多一扇窗。
+  do:
+    - 看一篇入门介绍
+    - 记录三个新词
+  dont:
+    - 一上来就买全套课程
+    - 用收藏代替学习
+  lucky_color:
+    name: 青金石蓝
+    value: "#4169a1"
+  lucky_symbol: 放大镜
+  energy: 80
+  quote:
+    text: 惊奇是思考开始的地方。
+    author: 柏拉图
+    source: Theaetetus
+    source_url: "https://www.gutenberg.org/ebooks/1726"
+    note: 据惊奇与哲学起点意译
+  tags: [learn, curiosity]
+  disclaimer: 仅供娱乐，不作为真实决策依据。
+
+- id: fortune-017
+  tier: 小吉
+  tone: grounded
+  theme: 走路
+  headline: 今天适合出门走二十分钟
+  summary: 不带目的的步行，会把很多念头从结里松开。
+  do:
+    - 走一条平时少走的路
+    - 留意一个颜色或声音
+  dont:
+    - 一路低头看屏幕
+    - 把散步变成运动 KPI
+  lucky_color:
+    name: 梧桐绿
+    value: "#7c9a6d"
+  lucky_symbol: 舒服的鞋
+  energy: 71
+  quote:
+    text: 自然用很小的事，提醒人恢复尺度。
+    author: 惠特曼
+    source: Leaves of Grass
+    source_url: "https://www.gutenberg.org/ebooks/1322"
+    note: 据《草叶集》自然主题意译
+  tags: [walk, nature]
+  disclaimer: 仅供娱乐，不作为真实决策依据。
+
+- id: fortune-018
+  tier: 平
+  tone: cautious
+  theme: 暂缓购物
+  headline: 今天适合先不下单
+  summary: 欲望来得快，真正需要通常能经得住一晚。
+  do:
+    - 把购物车放到明天再看
+    - 写下购买原因
+  dont:
+    - 因为折扣替自己制造需求
+    - 用快递填补疲惫
+  lucky_color:
+    name: 棉麻白
+    value: "#d9d0c1"
+  lucky_symbol: 便签清单
+  energy: 52
+  quote:
+    text: 拥有少一点，未必缺少更多。
+    author: 塞涅卡
+    source: Moral Letters to Lucilius
+    source_url: "https://www.gutenberg.org/ebooks/3794"
+    note: 据财富与节制主题意译
+  tags: [money, restraint]
+  disclaimer: 仅供娱乐，不作为真实决策依据。
+
+- id: fortune-019
+  tier: 吉
+  tone: precise
+  theme: 做一次复盘
+  headline: 今天适合回看一个刚结束的小周期
+  summary: 不急着责备或庆祝，先把有效动作和无效动作分开。
+  do:
+    - 写三条保留做法
+    - 写一条下次删掉的步骤
+  dont:
+    - 把结果全部归因给运气
+    - 用复盘继续审判自己
+  lucky_color:
+    name: 钢笔黑
+    value: "#30343b"
+  lucky_symbol: 横线本
+  energy: 75
+  quote:
+    text: 未经省察的日子，容易被惯性带走。
+    author: 苏格拉底
+    source: Plato, Apology
+    source_url: "https://www.gutenberg.org/ebooks/1656"
+    note: 据《申辩篇》省察主题意译
+  tags: [review, learning]
+  disclaimer: 仅供娱乐，不作为真实决策依据。
+
+- id: fortune-020
+  tier: 小吉
+  tone: playful
+  theme: 换一首歌
+  headline: 今天适合给房间换一段背景音乐
+  summary: 声音会改变空间的温度，也会改变你的动作速度。
+  do:
+    - 听一张完整专辑
+    - 给一个任务配一首轻音乐
+  dont:
+    - 循环播放让你烦躁的歌
+    - 用噪声盖住真正的疲惫
+  lucky_color:
+    name: 黑胶棕
+    value: "#7b5f50"
+  lucky_symbol: 耳机
+  energy: 68
+  quote:
+    text: 旋律能让无形的心情显出轮廓。
+    author: 雪莱
+    source: A Defence of Poetry
+    source_url: "https://www.gutenberg.org/ebooks/5428"
+    note: 据诗与想象力论述意译
+  tags: [music, mood]
+  disclaimer: 仅供娱乐，不作为真实决策依据。
+
+- id: fortune-021
+  tier: 大吉
+  tone: decisive
+  theme: 推进关键对话
+  headline: 今天适合把重要问题摆到桌面上
+  summary: 你已经准备够久了，今天需要的是清楚而礼貌的表达。
+  do:
+    - 先写下想得到的决定
+    - 把对话约在清醒时段
+  dont:
+    - 借闲聊绕过核心问题
+    - 期待对方自动读懂
+  lucky_color:
+    name: 石榴红
+    value: "#b85d59"
+  lucky_symbol: 圆桌
+  energy: 88
+  quote:
+    text: 勇气不是没有不安，而是仍然选择行动。
+    author: 亚里士多德
+    source: Nicomachean Ethics
+    source_url: "https://www.gutenberg.org/ebooks/8438"
+    note: 据勇德论述意译
+  tags: [decision, talk]
+  disclaimer: 仅供娱乐，不作为真实决策依据。
+
+- id: fortune-022
+  tier: 平
+  tone: tender
+  theme: 给自己余量
+  headline: 今天适合少排一件事
+  summary: 空白不是浪费，它给意外、恢复和真正的灵感留位置。
+  do:
+    - 给日程留出缓冲
+    - 把一个非必要安排移走
+  dont:
+    - 把每十分钟都塞满
+    - 因为空档而内疚
+  lucky_color:
+    name: 云朵灰
+    value: "#b9bdc2"
+  lucky_symbol: 空白页
+  energy: 59
+  quote:
+    text: 留白处也有生命的呼吸。
+    author: 约翰·济慈
+    source: Letters of John Keats
+    source_url: "https://www.gutenberg.org/ebooks/35698"
+    note: 据感受力与诗意生活主题意译
+  tags: [margin, rest]
+  disclaimer: 仅供娱乐，不作为真实决策依据。
+
+- id: fortune-023
+  tier: 吉
+  tone: orderly
+  theme: 归档
+  headline: 今天适合给成果找一个固定位置
+  summary: 不是所有努力都要马上展示，但它们值得被妥善保存。
+  do:
+    - 把完成物归档
+    - 给文件夹写一行说明
+  dont:
+    - 把成果散落在聊天记录里
+    - 反复重命名同一个版本
+  lucky_color:
+    name: 档案黄
+    value: "#c8a35b"
+  lucky_symbol: 文件夹
+  energy: 77
+  quote:
+    text: 秩序让记忆不必独自承担重量。
+    author: 培根
+    source: Essays
+    source_url: "https://www.gutenberg.org/ebooks/575"
+    note: 据知识与方法主题意译
+  tags: [archive, memory]
+  disclaimer: 仅供娱乐，不作为真实决策依据。
+
+- id: fortune-024
+  tier: 小吉
+  tone: domestic
+  theme: 打扫一角
+  headline: 今天适合擦亮一个常被忽略的角落
+  summary: 小范围的清洁会制造一种很实在的重启感。
+  do:
+    - 擦屏幕或键盘
+    - 清理一个抽屉
+  dont:
+    - 一开始就掀翻整个房间
+    - 边整理边责怪过去的自己
+  lucky_color:
+    name: 肥皂白
+    value: "#e1dfd5"
+  lucky_symbol: 抹布
+  energy: 66
+  quote:
+    text: 日常之中，也藏着重新开始的门。
+    author: 简·奥斯丁
+    source: Pride and Prejudice
+    source_url: "https://www.gutenberg.org/ebooks/1342"
+    note: 据日常观察与关系转变主题意译
+  tags: [clean, home]
+  disclaimer: 仅供娱乐，不作为真实决策依据。
+
+- id: fortune-025
+  tier: 平
+  tone: analytic
+  theme: 检查假设
+  headline: 今天适合问一句“我凭什么这么判断”
+  summary: 不急着反驳自己，只需要把证据和想象分开。
+  do:
+    - 写下一个关键假设
+    - 找一条反例
+  dont:
+    - 把直觉包装成事实
+    - 因为不确定就停止行动
+  lucky_color:
+    name: 铅灰
+    value: "#69707a"
+  lucky_symbol: 问号
+  energy: 62
+  quote:
+    text: 怀疑不是终点，它能把路照得更清楚。
+    author: 笛卡尔
+    source: Discourse on Method
+    source_url: "https://www.gutenberg.org/ebooks/59"
+    note: 据方法怀疑主题意译
+  tags: [thinking, evidence]
+  disclaimer: 仅供娱乐，不作为真实决策依据。
+
+- id: fortune-026
+  tier: 吉
+  tone: creative
+  theme: 写作
+  headline: 今天适合写一段不需要发布的文字
+  summary: 先让想法落地，不必立刻面对读者。
+  do:
+    - 写 300 字自由笔记
+    - 记录一个今天的细节
+  dont:
+    - 写第一句就开始编辑
+    - 把日记写成报告
+  lucky_color:
+    name: 墨水蓝
+    value: "#445b7f"
+  lucky_symbol: 钢笔
+  energy: 73
+  quote:
+    text: 文字有时先知道心要去哪里。
+    author: 弥尔顿
+    source: Areopagitica
+    source_url: "https://www.gutenberg.org/ebooks/608"
+    note: 据思想表达与自由主题意译
+  tags: [writing, create]
+  disclaimer: 仅供娱乐，不作为真实决策依据。
+
+- id: fortune-027
+  tier: 小吉
+  tone: social
+  theme: 请求帮助
+  headline: 今天适合提出一个具体请求
+  summary: 你不需要把所有事都独自扛到最后，再突然求救。
+  do:
+    - 明确说需要什么
+    - 说明希望对方何时回复
+  dont:
+    - 用抱怨代替请求
+    - 让别人猜你的缺口
+  lucky_color:
+    name: 羊毛米
+    value: "#cdbf9f"
+  lucky_symbol: 便携伞
+  energy: 70
+  quote:
+    text: 人相互扶持，才更像完整的人。
+    author: 约翰·多恩
+    source: Devotions upon Emergent Occasions
+    source_url: "https://www.gutenberg.org/ebooks/23772"
+    note: 据人与共同体主题意译
+  tags: [help, teamwork]
+  disclaimer: 仅供娱乐，不作为真实决策依据。
+
+- id: fortune-028
+  tier: 平
+  tone: patient
+  theme: 等一等
+  headline: 今天适合让一个答案过夜
+  summary: 有些决定不是缺勇气，而是还缺一轮沉淀。
+  do:
+    - 设置明天上午再回复
+    - 把担心点写成列表
+  dont:
+    - 被催促感带着走
+    - 用马上答应换短暂轻松
+  lucky_color:
+    name: 月光银
+    value: "#c2c7ce"
+  lucky_symbol: 月历
+  energy: 55
+  quote:
+    text: 时间不会替你决定，但会替你筛去浮沫。
+    author: 马可·奥勒留
+    source: Meditations
+    source_url: "https://www.gutenberg.org/ebooks/2680"
+    note: 据时间与判断主题意译
+  tags: [patience, choice]
+  disclaimer: 仅供娱乐，不作为真实决策依据。
+
+- id: fortune-029
+  tier: 吉
+  tone: craft
+  theme: 打磨细节
+  headline: 今天适合把一个细节做到舒服
+  summary: 不需要到处开花，改好一个关键接缝就很值。
+  do:
+    - 修一处排版或文案
+    - 给交付物做一次预览
+  dont:
+    - 把打磨变成无限延期
+    - 为了显得高级牺牲清楚
+  lucky_color:
+    name: 玻璃青
+    value: "#6fb4b2"
+  lucky_symbol: 小刷子
+  energy: 81
+  quote:
+    text: 美不是堆满，而是恰到好处。
+    author: 亚里士多德
+    source: Poetics
+    source_url: "https://www.gutenberg.org/ebooks/6763"
+    note: 据结构与尺度思想意译
+  tags: [polish, design]
+  disclaimer: 仅供娱乐，不作为真实决策依据。
+
+- id: fortune-030
+  tier: 小凶
+  tone: alert
+  theme: 避免硬刚
+  headline: 今天不适合在火气上头时争输赢
+  summary: 保住关系和事实，比当场证明自己更有价值。
+  do:
+    - 把争论移到稍后
+    - 先确认共同目标
+  dont:
+    - 用截图扩大冲突
+    - 在公开场合逼人表态
+  lucky_color:
+    name: 冷杉绿
+    value: "#547568"
+  lucky_symbol: 暂停键
+  energy: 49
+  quote:
+    text: 克制不是退让，而是把自己从怒气里领出来。
+    author: 塞涅卡
+    source: On Anger
+    source_url: "https://www.gutenberg.org/ebooks/56075"
+    note: 据《论愤怒》意译
+  tags: [conflict, restraint]
+  disclaimer: 仅供娱乐，不作为真实决策依据。
+
+- id: fortune-031
+  tier: 吉
+  tone: light
+  theme: 轻旅行
+  headline: 今天适合去一个近处的新地方
+  summary: 不必远行，换一条街也能让感官重新上线。
+  do:
+    - 去没去过的书店或公园
+    - 给路上的细节拍一张照片
+  dont:
+    - 把出门安排得像出差
+    - 因为天气不完美就取消
+  lucky_color:
+    name: 车票蓝
+    value: "#5f8fb3"
+  lucky_symbol: 单肩包
+  energy: 79
+  quote:
+    text: 世界会回应愿意观看的人。
+    author: 歌德
+    source: Italian Journey
+    source_url: "https://www.gutenberg.org/ebooks/53205"
+    note: 据旅行观察主题意译
+  tags: [outing, observe]
+  disclaimer: 仅供娱乐，不作为真实决策依据。
+
+- id: fortune-032
+  tier: 小吉
+  tone: human
+  theme: 体谅
+  headline: 今天适合给别人留一个解释空间
+  summary: 很多迟疑背后不是恶意，只是对方也在处理自己的难题。
+  do:
+    - 先问情况是否方便
+    - 把催促改成确认
+  dont:
+    - 一上来就定性
+    - 用冷处理惩罚不确定
+  lucky_color:
+    name: 烛光黄
+    value: "#d7b96d"
+  lucky_symbol: 小台灯
+  energy: 65
+  quote:
+    text: 温柔的判断，比聪明的误判更难得。
+    author: 狄更斯
+    source: David Copperfield
+    source_url: "https://www.gutenberg.org/ebooks/766"
+    note: 据同情与成长主题意译
+  tags: [empathy, relation]
+  disclaimer: 仅供娱乐，不作为真实决策依据。
+
+- id: fortune-033
+  tier: 大吉
+  tone: clean
+  theme: 收束项目
+  headline: 今天适合给一件事画上清楚的句号
+  summary: 完成不一定华丽，但它会释放很多被占用的心力。
+  do:
+    - 发出最终版本
+    - 写一段交接说明
+  dont:
+    - 因为可再优化就不结束
+    - 把所有遗憾都塞进最后一天
+  lucky_color:
+    name: 湖水绿
+    value: "#61a98d"
+  lucky_symbol: 句号
+  energy: 90
+  quote:
+    text: 行动完成以后，心才知道自己走到了哪里。
+    author: 爱比克泰德
+    source: Discourses
+    source_url: "https://www.gutenberg.org/ebooks/10661"
+    note: 据行动与意志主题意译
+  tags: [finish, release]
+  disclaimer: 仅供娱乐，不作为真实决策依据。
+
+- id: fortune-034
+  tier: 平
+  tone: modest
+  theme: 低调观察
+  headline: 今天适合站在边上看一会儿
+  summary: 不抢先发言，反而能更快看见事情的真实结构。
+  do:
+    - 记录谁在推动事情
+    - 等信息齐一点再判断
+  dont:
+    - 一开场就抢定义权
+    - 把沉默误认为落后
+  lucky_color:
+    name: 暗苔绿
+    value: "#66785f"
+  lucky_symbol: 玻璃窗
+  energy: 57
+  quote:
+    text: 看见整体之前，先不要急着给局部命名。
+    author: 庄子
+    source: 《庄子·齐物论》
+    source_url: "https://ctext.org/zhuangzi"
+    note: 据齐物思想意译
+  tags: [observe, wait]
+  disclaimer: 仅供娱乐，不作为真实决策依据。
+
+- id: fortune-035
+  tier: 小吉
+  tone: generous
+  theme: 分享
+  headline: 今天适合分享一个真的有用的小东西
+  summary: 一条链接、一段经验、一个模板，都可能省掉别人半天弯路。
+  do:
+    - 发一份干净的资料
+    - 补上你自己的使用提醒
+  dont:
+    - 把转发当作表达亲近
+    - 用信息量制造压力
+  lucky_color:
+    name: 栗子棕
+    value: "#9b6b4c"
+  lucky_symbol: 回形针
+  energy: 72
+  quote:
+    text: 真正的富足，会愿意让别人也轻松一点。
+    author: 孔子
+    source: 《论语》
+    source_url: "https://ctext.org/analects"
+    note: 据仁与成人之美相关章句意译
+  tags: [share, useful]
+  disclaimer: 仅供娱乐，不作为真实决策依据。
+
+- id: fortune-036
+  tier: 吉
+  tone: playful
+  theme: 给自己买花
+  headline: 今天适合给空间添一点真实颜色
+  summary: 不用昂贵，一支花、一张明亮贴纸，都能改变今天的重心。
+  do:
+    - 买一小束花
+    - 换一张桌面图片
+  dont:
+    - 等别人来安排仪式感
+    - 把美感留到“以后再说”
+  lucky_color:
+    name: 山茶粉
+    value: "#d79aa5"
+  lucky_symbol: 花瓶
+  energy: 74
+  quote:
+    text: 美让日常从重复里醒来。
+    author: 王尔德
+    source: The Critic as Artist
+    source_url: "https://www.gutenberg.org/ebooks/887"
+    note: 据审美与生活主题意译
+  tags: [beauty, home]
+  disclaimer: 仅供娱乐，不作为真实决策依据。
+
+- id: fortune-037
+  tier: 平
+  tone: careful
+  theme: 检查账目
+  headline: 今天适合看一眼最近的支出
+  summary: 不是为了紧张，而是为了让钱回到可理解的状态。
+  do:
+    - 标记三笔可调整支出
+    - 设一个本周小预算
+  dont:
+    - 只看总额不看原因
+    - 因为内疚就逃避记录
+  lucky_color:
+    name: 橄榄绿
+    value: "#7c8052"
+  lucky_symbol: 账本
+  energy: 60
+  quote:
+    text: 节制让自由不被欲望透支。
+    author: 亚里士多德
+    source: Nicomachean Ethics
+    source_url: "https://www.gutenberg.org/ebooks/8438"
+    note: 据中道与节制论述意译
+  tags: [budget, care]
+  disclaimer: 仅供娱乐，不作为真实决策依据。
+
+- id: fortune-038
+  tier: 吉
+  tone: attentive
+  theme: 维护工具
+  headline: 今天适合给常用工具做一次保养
+  summary: 顺手的工具不会凭空出现，它们也需要被照看。
+  do:
+    - 更新一个常用模板
+    - 清理浏览器书签栏
+  dont:
+    - 装一堆暂时不用的插件
+    - 让工具选择变成拖延
+  lucky_color:
+    name: 工具箱红
+    value: "#b76a5b"
+  lucky_symbol: 小螺丝刀
+  energy: 76
+  quote:
+    text: 手艺人的自由，常藏在熟悉的工具里。
+    author: 威廉·莫里斯
+    source: Hopes and Fears for Art
+    source_url: "https://www.gutenberg.org/ebooks/3773"
+    note: 据工艺与日常之美主题意译
+  tags: [tools, craft]
+  disclaimer: 仅供娱乐，不作为真实决策依据。
+
+- id: fortune-039
+  tier: 小吉
+  tone: bright
+  theme: 早一点出发
+  headline: 今天适合把路上的时间留宽
+  summary: 不赶路的一天，会给你额外的好脾气。
+  do:
+    - 提前十分钟出门
+    - 带上雨具或备用电量
+  dont:
+    - 把所有缓冲都献给拖延
+    - 迟到后再怪运气
+  lucky_color:
+    name: 清晨橙
+    value: "#d9a15e"
+  lucky_symbol: 交通卡
+  energy: 73
+  quote:
+    text: 准备不是恐惧，而是给从容开门。
+    author: 富兰克林
+    source: Poor Richard's Almanack
+    source_url: "https://www.gutenberg.org/ebooks/43855"
+    note: 据勤勉与预备主题意译
+  tags: [travel, rhythm]
+  disclaimer: 仅供娱乐，不作为真实决策依据。
+
+- id: fortune-040
+  tier: 平
+  tone: inward
+  theme: 少评判自己
+  headline: 今天适合把“我不行”改成“我还没到”
+  summary: 语言的方向会影响行动的方向，先别把门关死。
+  do:
+    - 写下一个正在学习中的能力
+    - 给自己一个可完成的练习
+  dont:
+    - 用一次失误定义整个人
+    - 和别人剪辑后的生活比较
+  lucky_color:
+    name: 淡紫灰
+    value: "#aaa2b7"
+  lucky_symbol: 橡皮擦
+  energy: 62
+  quote:
+    text: 认识自己，不等于苛责自己。
+    author: 柏拉图
+    source: Charmides
+    source_url: "https://www.gutenberg.org/ebooks/1580"
+    note: 据自知主题意译
+  tags: [self, learn]
+  disclaimer: 仅供娱乐，不作为真实决策依据。
+
+- id: fortune-041
+  tier: 吉
+  tone: crisp
+  theme: 设定结束时间
+  headline: 今天适合给任务加一个下班铃
+  summary: 没有结束线的任务会无限膨胀，给它边界就是给自己余地。
+  do:
+    - 给当前任务设停止点
+    - 到点后写下剩余事项
+  dont:
+    - 一边疲惫一边假装高效
+    - 用加时修补规划问题
+  lucky_color:
+    name: 番茄红
+    value: "#c85d52"
+  lucky_symbol: 小闹钟
+  energy: 75
+  quote:
+    text: 节奏感让劳动不吞掉生活。
+    author: 威廉·布莱克
+    source: Songs of Innocence and of Experience
+    source_url: "https://www.gutenberg.org/ebooks/1934"
+    note: 据劳作与想象主题意译
+  tags: [time, work]
+  disclaimer: 仅供娱乐，不作为真实决策依据。
+
+- id: fortune-042
+  tier: 小吉
+  tone: cinematic
+  theme: 做一顿简单的饭
+  headline: 今天适合亲手做一道不会失败的菜
+  summary: 可控的小火、熟悉的味道，会让一天落地。
+  do:
+    - 做一道家常菜
+    - 把餐桌收拾干净
+  dont:
+    - 为了仪式感挑战高难度
+    - 边吃边处理工作消息
+  lucky_color:
+    name: 米饭白
+    value: "#ece2ca"
+  lucky_symbol: 小锅
+  energy: 69
+  quote:
+    text: 生活的安稳，常从一件朴素小事开始。
+    author: 简·奥斯丁
+    source: Emma
+    source_url: "https://www.gutenberg.org/ebooks/158"
+    note: 据日常秩序主题意译
+  tags: [cook, settle]
+  disclaimer: 仅供娱乐，不作为真实决策依据。
+
+- id: fortune-043
+  tier: 吉
+  tone: awake
+  theme: 认真提问
+  headline: 今天适合提出一个能改变方向的问题
+  summary: 好问题会让争论停止转圈，开始向前。
+  do:
+    - 问“我们真正要解决什么”
+    - 把答案写成一句话
+  dont:
+    - 只问能证明自己对的问题
+    - 用复杂词掩盖模糊
+  lucky_color:
+    name: 电光青
+    value: "#56b7c2"
+  lucky_symbol: 便携白板
+  energy: 83
+  quote:
+    text: 提问让灵魂转身。
+    author: 苏格拉底
+    source: Plato, Meno
+    source_url: "https://www.gutenberg.org/ebooks/1643"
+    note: 据苏格拉底式问答意译
+  tags: [question, clarity]
+  disclaimer: 仅供娱乐，不作为真实决策依据。
+
+- id: fortune-044
+  tier: 平
+  tone: gentle
+  theme: 关闭比较
+  headline: 今天适合把别人的进度条先关掉
+  summary: 比较太多会让自己的路变窄，今天先回到自己的步速。
+  do:
+    - 少看排行榜和动态
+    - 记录自己本周的一个进步
+  dont:
+    - 用别人的高潮剪辑审判日常
+    - 把羡慕伪装成自责
+  lucky_color:
+    name: 海贝粉
+    value: "#d6aaa0"
+  lucky_symbol: 窗帘
+  energy: 54
+  quote:
+    text: 每个人的花期不同，枝叶也不必相同。
+    author: 艾米莉·狄金森
+    source: Poems by Emily Dickinson
+    source_url: "https://www.gutenberg.org/ebooks/12242"
+    note: 据自然意象与自我主题意译
+  tags: [compare, self]
+  disclaimer: 仅供娱乐，不作为真实决策依据。
+
+- id: fortune-045
+  tier: 小吉
+  tone: handy
+  theme: 修一个小故障
+  headline: 今天适合修好一个一直将就的小问题
+  summary: 那个每天烦你一下的小故障，值得今天被认真处理。
+  do:
+    - 换一根坏线或坏灯泡
+    - 修正一个反复出现的流程
+  dont:
+    - 继续把麻烦合理化
+    - 一次性拆开整个系统
+  lucky_color:
+    name: 黄铜金
+    value: "#b79457"
+  lucky_symbol: 备用电池
+  energy: 71
+  quote:
+    text: 小处被照料，整体才少些裂缝。
+    author: 约翰·罗斯金
+    source: The Seven Lamps of Architecture
+    source_url: "https://www.gutenberg.org/ebooks/35898"
+    note: 据工艺与诚实建造主题意译
+  tags: [fix, maintenance]
+  disclaimer: 仅供娱乐，不作为真实决策依据。
+
+- id: fortune-046
+  tier: 吉
+  tone: mellow
+  theme: 午后茶点
+  headline: 今天适合给下午留一小块甜
+  summary: 中段的温柔补给，会让后半天不那么硬撑。
+  do:
+    - 下午喝一杯热饮
+    - 站到窗边休息五分钟
+  dont:
+    - 连续开会不留空隙
+    - 用咖啡硬压睡意
+  lucky_color:
+    name: 奶茶棕
+    value: "#b99374"
+  lucky_symbol: 小饼干
+  energy: 67
+  quote:
+    text: 愉悦并不轻浮，它让心愿意继续。
+    author: 伊壁鸠鲁
+    source: Letter to Menoeceus
+    source_url: "https://www.gutenberg.org/ebooks/50625"
+    note: 据适度快乐主题意译
+  tags: [break, pleasure]
+  disclaimer: 仅供娱乐，不作为真实决策依据。
+
+- id: fortune-047
+  tier: 平
+  tone: exact
+  theme: 审稿
+  headline: 今天适合做一次安静的二读
+  summary: 第一遍看热闹，第二遍看结构，真正的问题多半在第二遍出现。
+  do:
+    - 从读者角度重读
+    - 删除一句漂亮但无用的话
+  dont:
+    - 边写边无限审判
+    - 为了显得完整塞进旁枝
+  lucky_color:
+    name: 校样蓝
+    value: "#5876a5"
+  lucky_symbol: 红笔
+  energy: 66
+  quote:
+    text: 清楚的表达，是对读者的礼貌。
+    author: 布莱兹·帕斯卡
+    source: Pensées
+    source_url: "https://www.gutenberg.org/ebooks/18269"
+    note: 据《思想录》中简洁与判断相关思想意译
+  tags: [edit, clarity]
+  disclaimer: 仅供娱乐，不作为真实决策依据。
+
+- id: fortune-048
+  tier: 吉
+  tone: fresh
+  theme: 早晨整理
+  headline: 今天适合从一个清爽的开场开始
+  summary: 早晨的第一件小事如果清楚，后面就不容易散。
+  do:
+    - 起床后先铺床
+    - 写下今天唯一最重要的事
+  dont:
+    - 睁眼就进入消息流
+    - 把早餐时间让给焦虑
+  lucky_color:
+    name: 清露绿
+    value: "#9ac8a7"
+  lucky_symbol: 窗户
+  energy: 84
+  quote:
+    text: 清晨像一张新纸，别急着把它写满。
+    author: 梭罗
+    source: Walden
+    source_url: "https://www.gutenberg.org/ebooks/205"
+    note: 据《瓦尔登湖》晨光主题意译
+  tags: [morning, reset]
+  disclaimer: 仅供娱乐，不作为真实决策依据。
+
+- id: fortune-049
+  tier: 小吉
+  tone: neighborly
+  theme: 做一件顺手好事
+  headline: 今天适合顺手帮一个小忙
+  summary: 不必宏大，顺手扶一下也能让这一天变得更有人味。
+  do:
+    - 帮同事确认一个小细节
+    - 给公共空间留得更整洁
+  dont:
+    - 帮忙以后索取情绪回报
+    - 把自己累坏来证明善意
+  lucky_color:
+    name: 暖灰
+    value: "#a99f91"
+  lucky_symbol: 共享雨伞
+  energy: 70
+  quote:
+    text: 善意在小事里，比在口号里更可靠。
+    author: 孔子
+    source: 《论语》
+    source_url: "https://ctext.org/analects"
+    note: 据仁与日用相关章句意译
+  tags: [kindness, daily]
+  disclaimer: 仅供娱乐，不作为真实决策依据。
+
+- id: fortune-050
+  tier: 平
+  tone: sane
+  theme: 拆小任务
+  headline: 今天适合把大任务拆成能动手的一步
+  summary: 大任务最吓人的地方，通常是还没被切开。
+  do:
+    - 写下第一步动词
+    - 只完成一个可见动作
+  dont:
+    - 继续在脑内搬运整座山
+    - 用宏大目标逃避开始
+  lucky_color:
+    name: 石板蓝
+    value: "#6b819a"
+  lucky_symbol: 拼图块
+  energy: 72
+  quote:
+    text: 困难一旦被分解，就露出可以下手的边。
+    author: 笛卡尔
+    source: Discourse on Method
+    source_url: "https://www.gutenberg.org/ebooks/59"
+    note: 据方法第二准则意译
+  tags: [task, method]
+  disclaimer: 仅供娱乐，不作为真实决策依据。
+
+- id: fortune-051
+  tier: 吉
+  tone: gracious
+  theme: 接受夸奖
+  headline: 今天适合好好收下一句肯定
+  summary: 别急着解释“也没有啦”，被看见也是一种关系的完成。
+  do:
+    - 只说谢谢
+    - 记录别人认可的具体点
+  dont:
+    - 立刻贬低自己的成果
+    - 把称赞转成压力
+  lucky_color:
+    name: 珍珠白
+    value: "#ded8c7"
+  lucky_symbol: 小徽章
+  energy: 73
+  quote:
+    text: 谦逊不需要把光全部推开。
+    author: 简·奥斯丁
+    source: Persuasion
+    source_url: "https://www.gutenberg.org/ebooks/105"
+    note: 据自尊与克制主题意译
+  tags: [praise, confidence]
+  disclaimer: 仅供娱乐，不作为真实决策依据。
+
+- id: fortune-052
+  tier: 大吉
+  tone: luminous
+  theme: 抬头看天
+  headline: 今天适合在傍晚抬头看一会儿天
+  summary: 视线离开屏幕几分钟，人会想起自己不只是待办的容器。
+  do:
+    - 看一段晚霞或云
+    - 给今天取一个颜色名
+  dont:
+    - 把所有空闲都交给屏幕
+    - 用效率衡量每一次呼吸
+  lucky_color:
+    name: 暮云紫
+    value: "#8e86bd"
+  lucky_symbol: 天窗
+  energy: 87
+  quote:
+    text: 天空的辽阔，会把心里的比例调回来。
+    author: 玛丽·雪莱
+    source: Frankenstein
+    source_url: "https://www.gutenberg.org/ebooks/84"
+    note: 据自然景观与内心震动主题意译
+  tags: [sky, wonder]
   disclaimer: 仅供娱乐，不作为真实决策依据。

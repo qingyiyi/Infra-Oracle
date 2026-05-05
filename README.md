@@ -16,7 +16,7 @@ Infra-Oracle 是一个基于 Astro 的 static-first 技术展示站，面向 AI 
 - `/radar/`：`Weekly AI Infra Radar` 最新一期与归档页
 - `/radar/<issue-slug>/`：单期 Radar 详情页，例如 `weekly-ai-infra-radar-2026-w18`
 - `/runner/`：`Web Codex Runner` 对话式任务原型页
-- `/fortune/`：`Cyber Fortune` 轻量展示页壳
+- 首页右侧 `Cyber Fortune` 每日小组件：轻量娱乐签面，不再提供独立 `/fortune/` 页面
 
 ## 核心模块
 
@@ -65,13 +65,15 @@ npm run radar:publish
 - PDF / Word / 图片等附件上传后只作为资料解析；公网大文件走分片上传并显示进度，文件实体按当前后端策略过期清理
 - 上传文件、生成文件、任务日志和 Word 输出不进入 GitHub 仓库
 
-### 3. Cyber Fortune
+### 3. Cyber Fortune 首页小组件
 
-一个娱乐化的开发者签文模块，用于增强站点识别度和轻量互动感。
+一个娱乐化的每日签面小组件，用于增强站点识别度和轻量互动感。
 
 当前边界：
 
-- 仅作为轻量趣味模块
+- 仅作为首页右侧轻量趣味模块，不进入顶层导航
+- 每天按本地日期固定显示，不提供刷新抽签
+- 数据来自静态 YAML 内容池，包含签面、幸运色、宜忌和公版哲学 / 文学引用来源
 - 不作为真实决策、投资或运维判断依据
 
 ## 非目标

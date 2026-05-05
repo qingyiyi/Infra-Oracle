@@ -517,6 +517,203 @@ textarea.field__control {
   gap: var(--space-4);
 }
 
+.fortune-widget {
+  position: relative;
+  overflow: hidden;
+}
+
+.fortune-widget::before {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  content: "";
+  background:
+    linear-gradient(135deg, rgba(84, 210, 160, 0.12), transparent 36%),
+    linear-gradient(315deg, rgba(240, 201, 108, 0.09), transparent 42%);
+}
+
+.fortune-widget > * {
+  position: relative;
+}
+
+.fortune-widget__header {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: var(--space-3);
+  align-items: center;
+}
+
+.fortune-widget__icon {
+  display: grid;
+  place-items: center;
+  width: 2.55rem;
+  height: 2.55rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: var(--radius-sm);
+  color: var(--color-success);
+  background: rgba(84, 210, 160, 0.1);
+}
+
+.fortune-widget__icon svg {
+  width: 1.2rem;
+  height: 1.2rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.fortune-widget__title {
+  display: grid;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.fortune-widget__date {
+  white-space: nowrap;
+}
+
+.fortune-widget__hero {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--space-4);
+  align-items: start;
+}
+
+.fortune-widget__rank {
+  display: grid;
+  place-items: center;
+  width: 3.2rem;
+  height: 3.2rem;
+  border: 1px solid rgba(240, 201, 108, 0.28);
+  border-radius: var(--radius-sm);
+  color: var(--color-warning);
+  background: rgba(240, 201, 108, 0.1);
+  font-size: var(--text-h2);
+  font-weight: 680;
+  line-height: 1;
+}
+
+.fortune-widget__meta-grid,
+.fortune-widget__list-grid {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.fortune-widget__meta {
+  display: grid;
+  gap: var(--space-2);
+  min-width: 0;
+  padding: var(--space-3);
+  border: 1px solid rgba(255, 255, 255, 0.075);
+  border-radius: var(--radius-sm);
+  background: rgba(0, 0, 0, 0.16);
+}
+
+.fortune-energy {
+  height: 0.55rem;
+  overflow: hidden;
+  border-radius: var(--radius-pill);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.fortune-energy span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--color-success), var(--color-warning));
+}
+
+.fortune-color {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  color: var(--color-text-soft);
+  font-size: var(--text-caption);
+}
+
+.fortune-color__swatch {
+  flex: 0 0 auto;
+  width: 1.3rem;
+  height: 1.3rem;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  box-shadow: 0 0 18px rgba(255, 255, 255, 0.08);
+}
+
+.fortune-color small {
+  display: block;
+  color: var(--color-text-dim);
+  font-family: var(--font-mono);
+  font-size: var(--text-micro);
+  line-height: 1.4;
+}
+
+.fortune-token {
+  margin: 0;
+  color: var(--color-text-soft);
+  font-size: var(--text-caption);
+}
+
+.fortune-widget__list {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid rgba(255, 255, 255, 0.075);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.fortune-widget__list ul {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding-left: 1.05rem;
+  color: var(--color-text-soft);
+  font-size: var(--text-caption);
+}
+
+.fortune-widget__list--do {
+  border-color: rgba(84, 210, 160, 0.18);
+}
+
+.fortune-widget__list--dont {
+  border-color: rgba(255, 138, 122, 0.16);
+}
+
+.fortune-quote {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: var(--space-4);
+  border-left: 2px solid rgba(240, 201, 108, 0.45);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.028);
+}
+
+.fortune-quote blockquote {
+  margin: 0;
+  color: var(--color-text-soft);
+  font-size: var(--text-caption);
+}
+
+.fortune-quote figcaption {
+  color: var(--color-text-muted);
+  font-size: var(--text-micro);
+}
+
+.fortune-quote a {
+  text-decoration: underline;
+  text-decoration-color: rgba(255, 255, 255, 0.22);
+  text-underline-offset: 0.2rem;
+}
+
+.fortune-widget__disclaimer {
+  color: var(--color-text-dim);
+}
+
 .surface-list {
   display: grid;
   gap: var(--space-3);

@@ -2,6 +2,7 @@
 import BaseLayout from "../layouts/BaseLayout.astro";
 import Badge from "../components/ui/Badge.astro";
 import Button from "../components/ui/Button.astro";
+import FortuneWidget from "../components/sections/FortuneWidget.astro";
 import Panel from "../components/ui/Panel.astro";
 import SectionHeader from "../components/ui/SectionHeader.astro";
 import {
@@ -50,19 +51,6 @@ const modulePreviewCards = [
     tone: "default" as const,
     status: "prototype",
   },
-  {
-    eyebrow: "Cyber Fortune",
-    title: "娱乐化的开发者签面",
-    summary:
-      "保留轻量趣味性和识别度，用程序员语境改写签文和宜忌，但始终明确它只是娱乐模块。",
-    note:
-      "适合作为记忆点和轻互动补充，不作为真实决策依据，也不会抢走首页主轴。",
-    tags: ["吉", "coding", "daily"],
-    route: withBase(siteRoutes.fortune),
-    action: "查看 Fortune",
-    tone: "subtle" as const,
-    status: "entertainment-only",
-  },
 ];
 
 const futureExperiments = [
@@ -100,8 +88,8 @@ const futureExperiments = [
           一个把精选情报、可执行模板和轻量实验聚到同一界面的技术实验站。
         </h1>
         <p class="body-lg">
-          这里优先提供经过人工筛选的 Radar 入口、边界清晰的 Runner 原型，以及娱乐化的 Fortune
-          模块。首版不是营销页，也不是通用博客模板，而是一个持续可迭代的开发者界面。
+          这里优先提供经过人工筛选的 Radar 入口、边界清晰的 Runner 原型，以及首页右侧的每日 Fortune
+          小组件。首版不是营销页，也不是通用博客模板，而是一个持续可迭代的开发者界面。
         </p>
       </div>
 
@@ -118,7 +106,7 @@ const futureExperiments = [
         </li>
         <li>
           <p class="mono-label">What ships now</p>
-          <p class="body-md">可访问首页、Radar / Runner / Fortune 三个模块页，以及用于后续迭代的共享设计系统。</p>
+          <p class="body-md">可访问首页、Radar / Runner 两个模块页，以及首页每日 Fortune 小组件和用于后续迭代的共享设计系统。</p>
         </li>
         <li>
           <p class="mono-label">What it is not</p>
@@ -128,19 +116,21 @@ const futureExperiments = [
     </div>
 
     <div class="page-intro__rail">
+      <FortuneWidget />
+
       <Panel tone="accent" padding="lg">
         <p class="mono-label">Current focus</p>
-        <h2 class="title-2">Radar first, guarded tools second, playful edges last.</h2>
+        <h2 class="title-2">Radar first, guarded tools second, playful edges in the rail.</h2>
         <p class="body-sm">
-          首页当前按 `Radar -> Runner -> Fortune` 的顺序组织，先服务持续信息价值，再解释工具原型，
-          最后用轻互动模块增加记忆点。
+          首页当前按 `Radar -> Runner` 的主轴组织，先服务持续信息价值，再解释工具原型；
+          Fortune 收敛为右侧轻量卡片，只负责增加一点日常趣味。
         </p>
       </Panel>
 
       <div class="stack-grid">
         <Panel tone="subtle">
           <div class="metric">
-            <span class="metric__value">3</span>
+            <span class="metric__value">2</span>
             <span class="metric__label">core modules with live routes</span>
           </div>
         </Panel>
@@ -163,8 +153,8 @@ const futureExperiments = [
   <section class="section">
     <SectionHeader
       eyebrow="Core Modules"
-      title="Three entry points, one shared interface."
-      description="首页先把最值得继续点进去的入口讲清楚：人工审查友好的 Radar、边界明确的 Runner，以及轻量趣味的 Fortune。"
+      title="Two entry points, one shared interface."
+      description="首页先把最值得继续点进去的入口讲清楚：人工审查友好的 Radar，以及边界明确的 Runner；Fortune 作为右侧每日小组件保留轻互动。"
     />
 
     <div class="bento-grid">
@@ -194,7 +184,7 @@ const futureExperiments = [
     <SectionHeader
       eyebrow="This Week In View"
       title="The current surface uses real content where it already exists."
-      description="Radar 预览直接连接当前 content collection；Runner 和 Fortune 继续明确展示边界，而不假装完整功能已经实现。"
+      description="Radar 预览直接连接当前 content collection；Runner 继续明确展示边界，而不假装完整功能已经实现。"
     />
 
     <div class="split-grid">

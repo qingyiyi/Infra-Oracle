@@ -2,7 +2,6 @@ export const siteRoutes = {
   home: "/",
   radar: "/radar/",
   runner: "/runner/",
-  fortune: "/fortune/",
 } as const;
 
 export type SiteRouteKey = keyof typeof siteRoutes;
