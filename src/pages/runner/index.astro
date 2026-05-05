@@ -306,8 +306,10 @@ const helpItems = [
       return `${value} B`;
     }
 
-    const CHUNKED_UPLOAD_THRESHOLD = 2 * 1024 * 1024;
-    const CHUNKED_UPLOAD_SIZE = 512 * 1024;
+    const SINGLE_UPLOAD_FAST_PATH_LIMIT = 10 * 1024 * 1024;
+    const CHUNKED_UPLOAD_FALLBACK_MIN_SIZE = 2 * 1024 * 1024;
+    const CHUNKED_UPLOAD_THRESHOLD = SINGLE_UPLOAD_FAST_PATH_LIMIT;
+    const CHUNKED_UPLOAD_SIZE = 1024 * 1024;
 
     function formatUploadProgress(file) {
       if (typeof file.uploadProgress === "number") {
@@ -315,6 +317,12 @@ const helpItems = [
         return `${prefix}${Math.max(0, Math.min(100, Math.round(file.uploadProgress)))}%`;
       }
       return "上传中";
+    }
+
+    function shouldRetryUploadInChunks(error, file) {
+      if (!file || file.size < CHUNKED_UPLOAD_FALLBACK_MIN_SIZE || file.size > SINGLE_UPLOAD_FAST_PATH_LIMIT) return false;
+      if (error?.status && error.status >= 400 && error.status < 500) return false;
+      return true;
     }
 
     function safeFileLabel(file) {
@@ -1559,9 +1567,7 @@ const helpItems = [
       }
       for (const { file, localItem } of uploadQueue) {
         const usesChunkedUpload = file.size > CHUNKED_UPLOAD_THRESHOLD;
-        const uploadLabel = usesChunkedUpload ? "正在分片上传" : "正在上传";
-        const formData = new FormData();
-        formData.append("file", file);
+        let uploadLabel = usesChunkedUpload ? "正在分片上传" : "正在上传";
         setStatus(`${uploadLabel} ${file.name}`);
         try {
           const onProgress = (progress) => {
@@ -1572,9 +1578,27 @@ const helpItems = [
             renderFiles();
             setStatus(`${uploadLabel} ${file.name} ${Math.round(progress)}%`);
           };
-          const payload = usesChunkedUpload
-            ? await uploadFileInChunks(file, localItem, onProgress)
-            : await uploadFileRequest(`/jobs/${state.jobId}/files`, formData, onProgress);
+          let payload;
+          if (usesChunkedUpload) {
+            payload = await uploadFileInChunks(file, localItem, onProgress);
+          } else {
+            const formData = new FormData();
+            formData.append("file", file);
+            try {
+              payload = await uploadFileRequest(`/jobs/${state.jobId}/files`, formData, onProgress);
+            } catch (error) {
+              if (!shouldRetryUploadInChunks(error, file)) throw error;
+              uploadLabel = "单次上传失败，正在改用分片上传";
+              setStatus(`${uploadLabel} ${file.name}`);
+              showToast("单次上传失败，正在改用分片上传");
+              state.files = state.files.map((item) => item.id === localItem.id
+                ? { ...item, uploadMode: "chunked", uploadProgress: 0 }
+                : item
+              );
+              renderFiles();
+              payload = await uploadFileInChunks(file, localItem, onProgress);
+            }
+          }
           if (state.busy) {
             await api(`/jobs/${state.jobId}/files/${payload.file.id}`, { method: "DELETE", headers: authHeaders() }).catch(() => undefined);
             state.files = state.files.filter((item) => item.id !== localItem.id);
