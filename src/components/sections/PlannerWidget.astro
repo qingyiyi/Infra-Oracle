@@ -1,0 +1,149 @@
+---
+import Badge from "../ui/Badge.astro";
+import Button from "../ui/Button.astro";
+import Panel from "../ui/Panel.astro";
+import {
+  defaultPlannerTasks,
+  getPlannerPayload,
+  getPlannerTaskType,
+  plannerDays,
+} from "../../lib/planner";
+import { siteRoutes, withBase } from "../../lib/routes";
+
+const plannerPayload = JSON.stringify(getPlannerPayload()).replace(/</g, "\\u003c");
+const previewTasks = defaultPlannerTasks.slice(0, 5);
+---
+
+<Panel as="aside" tone="subtle" padding="lg" class="planner-widget" data-planner-widget>
+  <div class="planner-widget__header">
+    <div>
+      <p class="mono-label">Weekly Plan</p>
+      <h2 class="title-3">本周安排</h2>
+    </div>
+    <Badge tone="accent" data-planner-widget-count>{defaultPlannerTasks.length} tasks</Badge>
+  </div>
+
+  <div class="planner-widget__days" aria-hidden="true">
+    {plannerDays.map((day) => (
+      <span>{day.shortLabel}</span>
+    ))}
+  </div>
+
+  <div class="planner-widget__bars" data-planner-widget-bars>
+    {previewTasks.map((task) => {
+      const type = getPlannerTaskType(task.type);
+      return (
+        <article
+          class="planner-widget__row"
+          style={`--task-start: ${task.startDay + 1}; --task-end: ${task.endDay + 2}; --task-color: ${type.color};`}
+        >
+          <span>{task.title}</span>
+          <em>{type.label}</em>
+        </article>
+      );
+    })}
+  </div>
+
+  <div class="planner-widget__footer">
+    <p class="caption">编辑后首页会读取同一份本地计划。</p>
+    <Button href={withBase(siteRoutes.planner)} variant="secondary" size="sm">打开 Planner</Button>
+  </div>
+
+  <script is:inline type="application/json" data-planner-widget-data set:html={plannerPayload}></script>
+  <script is:inline>
+    (() => {
+      const widget = document.querySelector("[data-planner-widget]");
+      const dataNode = widget?.querySelector("[data-planner-widget-data]");
+      const bars = widget?.querySelector("[data-planner-widget-bars]");
+      const count = widget?.querySelector("[data-planner-widget-count]");
+
+      if (!widget || !dataNode || !bars) return;
+
+      let payload;
+
+      try {
+        payload = JSON.parse(dataNode.textContent || "{}");
+      } catch {
+        return;
+      }
+
+      const storageKey = payload.storageKey || "infra-oracle.weekly-planner.v1";
+      const taskTypes = Array.isArray(payload.taskTypes) ? payload.taskTypes : [];
+      const defaultTasks = Array.isArray(payload.defaultTasks) ? payload.defaultTasks : [];
+      const days = Array.isArray(payload.days) ? payload.days : [];
+      const typeMap = new Map(taskTypes.map((type) => [type.id, type]));
+
+      function clampDay(value) {
+        const number = Number(value);
+        if (!Number.isFinite(number)) return 0;
+        return Math.max(0, Math.min(6, Math.trunc(number)));
+      }
+
+      function normalizeTask(task, index = 0) {
+        if (!task || typeof task !== "object") return null;
+        const title = String(task.title || "").trim().slice(0, 60);
+        if (!title) return null;
+        const startDay = clampDay(task.startDay);
+        const endDay = Math.max(startDay, clampDay(task.endDay));
+        return {
+          id: String(task.id || `task-${index + 1}`),
+          title,
+          type: typeMap.has(task.type) ? task.type : "custom",
+          startDay,
+          endDay,
+          note: String(task.note || "").trim().slice(0, 120),
+        };
+      }
+
+      function normalizeTasks(rawTasks) {
+        const next = Array.isArray(rawTasks)
+          ? rawTasks.map(normalizeTask).filter(Boolean)
+          : [];
+        return (next.length ? next : defaultTasks).slice().sort((a, b) =>
+          a.startDay - b.startDay || a.endDay - b.endDay || a.title.localeCompare(b.title)
+        );
+      }
+
+      function loadTasks() {
+        try {
+          return normalizeTasks(JSON.parse(window.localStorage.getItem(storageKey) || "null"));
+        } catch {
+          return normalizeTasks(defaultTasks);
+        }
+      }
+
+      function dayRangeText(task) {
+        const start = days[task.startDay]?.label || "周一";
+        const end = days[task.endDay]?.label || start;
+        return task.startDay === task.endDay ? start : `${start}-${end}`;
+      }
+
+      function render() {
+        const tasks = loadTasks();
+        bars.replaceChildren();
+        if (count) count.textContent = `${tasks.length} tasks`;
+
+        for (const task of tasks.slice(0, 5)) {
+          const type = typeMap.get(task.type) || typeMap.get("custom") || { label: "自定义", color: "#c7cad2" };
+          const row = document.createElement("article");
+          row.className = "planner-widget__row";
+          row.style.setProperty("--task-start", String(task.startDay + 1));
+          row.style.setProperty("--task-end", String(task.endDay + 2));
+          row.style.setProperty("--task-color", type.color);
+
+          const title = document.createElement("span");
+          title.textContent = task.title;
+          const meta = document.createElement("em");
+          meta.textContent = `${type.label} · ${dayRangeText(task)}`;
+          row.append(title, meta);
+          bars.append(row);
+        }
+      }
+
+      render();
+      window.addEventListener("storage", (event) => {
+        if (event.key === storageKey) render();
+      });
+    })();
+  </script>
+</Panel>

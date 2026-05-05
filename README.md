@@ -12,10 +12,11 @@ Infra-Oracle 是一个基于 Astro 的 static-first 技术展示站，面向 AI 
 
 当前已落地的页面包括：
 
-- `/`：首页，作为多小组件展示面，包含短定位、最新 Radar 三张重点卡、Runner 边界卡、右侧 Fortune / Status 和 Future Experiments 轻量入口
+- `/`：首页，作为多小组件展示面，包含短定位、Planner 本周计划、最新 Radar 三张重点卡、Runner 边界卡、右侧 Fortune / Status 和 Future Experiments 轻量入口
 - `/radar/`：`Weekly AI Infra Radar` 最新一期与归档页
 - `/radar/<issue-slug>/`：单期 Radar 详情页，例如 `weekly-ai-infra-radar-2026-w18`
 - `/runner/`：`Web Codex Runner` 对话式任务原型页
+- `/planner/`：本周计划甘特图页面，支持在当前浏览器里编辑工作、论文、项目、娱乐和休息安排
 - 首页右侧 `Cyber Fortune` 每日小组件：轻量娱乐签面，不再提供独立 `/fortune/` 页面
 
 ## 核心模块
@@ -66,7 +67,18 @@ npm run radar:publish
 - PDF / Word / 图片等附件上传后只作为资料解析；公网大文件走分片上传并显示进度，文件实体按当前后端策略过期清理
 - 上传文件、生成文件、任务日志和 Word 输出不进入 GitHub 仓库
 
-### 3. Cyber Fortune 首页小组件
+### 3. Weekly Planner / 本周甘特图
+
+一个轻量的本周安排工具，用于把工作、读论文、改论文、看电影、休息、game、刷剧、看小说、运动、做项目和自定义任务排成周视图。
+
+当前边界：
+
+- `/planner/` 是独立可编辑页面，并进入顶部导航
+- 首页首屏按钮下方展示同一份本周计划摘要
+- 数据只保存在当前浏览器 `localStorage`，不会写回 GitHub，也不会同步到后端
+- 首版通过表单新增、编辑、删除和重置示例任务；拖拽调整日期、多周切换和导入导出作为后续增强
+
+### 4. Cyber Fortune 首页小组件
 
 一个娱乐化的每日签面小组件，用于增强站点识别度和轻量互动感。
 

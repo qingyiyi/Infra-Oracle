@@ -3,6 +3,7 @@ import BaseLayout from "../layouts/BaseLayout.astro";
 import Badge from "../components/ui/Badge.astro";
 import Button from "../components/ui/Button.astro";
 import FortuneWidget from "../components/sections/FortuneWidget.astro";
+import PlannerWidget from "../components/sections/PlannerWidget.astro";
 import Panel from "../components/ui/Panel.astro";
 import {
   formatRadarDate,
@@ -81,8 +82,10 @@ const futureExperiments = [
       <div class="action-row">
         <Button href={latestRadarRoute} variant="primary">看本周热闹</Button>
         <Button href={withBase(siteRoutes.runner)} variant="secondary">进入 Runner</Button>
-        <Button href="#future-experiments" variant="ghost">Future Lab</Button>
+        <Button href={withBase(siteRoutes.planner)} variant="ghost">本周计划</Button>
       </div>
+
+      <PlannerWidget />
     </div>
 
     <div class="page-intro__rail">
