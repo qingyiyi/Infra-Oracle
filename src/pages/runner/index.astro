@@ -226,6 +226,8 @@ const helpItems = [
     const HEARTBEAT_INTERVAL_MS = 15000;
     const HEARTBEAT_FAILURE_LIMIT = 4;
     const CHUNKED_UPLOAD_CONCURRENCY = 3;
+    const CHUNK_UPLOAD_RETRIES = 2;
+    const UPLOAD_CONFIRM_RETRIES = 2;
 
     const state = {
       token: sessionStorage.getItem("runnerSessionToken") || "",
@@ -239,6 +241,7 @@ const helpItems = [
       busy: false,
       authenticated: false,
       runnerInteractive: false,
+      activeUploads: 0,
       leaving: false,
     };
 
@@ -311,12 +314,39 @@ const helpItems = [
     const CHUNKED_UPLOAD_THRESHOLD = SINGLE_UPLOAD_FAST_PATH_LIMIT;
     const CHUNKED_UPLOAD_SIZE = 1024 * 1024;
 
+    function delay(ms) {
+      return new Promise((resolve) => window.setTimeout(resolve, ms));
+    }
+
     function formatUploadProgress(file) {
+      if (file.uploadStatusDetail === "confirming") return "等待服务器确认";
       if (typeof file.uploadProgress === "number") {
         const prefix = file.uploadMode === "chunked" ? "分片上传 " : "";
         return `${prefix}${Math.max(0, Math.min(100, Math.round(file.uploadProgress)))}%`;
       }
       return "上传中";
+    }
+
+    function isTransientUploadError(error) {
+      if (!error?.status) return true;
+      if (error.status === 408 || error.status === 409 || error.status === 425 || error.status === 429) return true;
+      return error.status >= 500;
+    }
+
+    async function retryUploadOperation(operation, options = {}) {
+      const attempts = (options.retries ?? 0) + 1;
+      let lastError;
+      for (let attempt = 0; attempt < attempts; attempt += 1) {
+        try {
+          return await operation(attempt);
+        } catch (error) {
+          lastError = error;
+          if (attempt >= attempts - 1 || !isTransientUploadError(error)) break;
+          const baseDelay = options.baseDelayMs ?? 800;
+          await delay(baseDelay * (attempt + 1));
+        }
+      }
+      throw lastError;
     }
 
     function shouldRetryUploadInChunks(error, file) {
@@ -1269,7 +1299,6 @@ const helpItems = [
             }
           })();
           if (request.status >= 200 && request.status < 300) {
-            onProgress?.(100);
             resolve(payload);
             return;
           }
@@ -1318,6 +1347,15 @@ const helpItems = [
       });
     }
 
+    function markUploadConfirming(localItem, label, fileName) {
+      state.files = state.files.map((item) => item.id === localItem.id
+        ? { ...item, uploadProgress: 99, uploadStatusDetail: "confirming" }
+        : item
+      );
+      renderFiles();
+      setStatus(`${label} ${fileName}：等待服务器确认`);
+    }
+
     async function uploadFileInChunks(file, localItem, onProgress) {
       const chunkSize = CHUNKED_UPLOAD_SIZE;
       const chunkCount = Math.ceil(file.size / chunkSize);
@@ -1330,10 +1368,13 @@ const helpItems = [
           nextIndex += 1;
           const start = index * chunkSize;
           const chunk = file.slice(start, Math.min(file.size, start + chunkSize));
-          await rawUploadRequest(`/jobs/${state.jobId}/file-chunks/${uploadId}/${index}`, chunk, {
+          await retryUploadOperation(() => rawUploadRequest(`/jobs/${state.jobId}/file-chunks/${uploadId}/${index}`, chunk, {
             method: "PUT",
             contentType: "application/octet-stream",
             timeout: 180000,
+          }), {
+            retries: CHUNK_UPLOAD_RETRIES,
+            baseDelayMs: 700,
           });
           uploadedBytes += chunk.size;
           onProgress?.(Math.min(99, (uploadedBytes / file.size) * 100));
@@ -1344,7 +1385,8 @@ const helpItems = [
         () => uploadNextChunk(),
       );
       await Promise.all(workers);
-      const payload = await rawUploadRequest(`/jobs/${state.jobId}/file-chunks/${uploadId}/complete`, JSON.stringify({
+      markUploadConfirming(localItem, "正在合并上传文件", file.name);
+      const payload = await retryUploadOperation(() => rawUploadRequest(`/jobs/${state.jobId}/file-chunks/${uploadId}/complete`, JSON.stringify({
         originalName: file.name,
         mime: file.type || "application/octet-stream",
         size: file.size,
@@ -1353,9 +1395,26 @@ const helpItems = [
         method: "POST",
         contentType: "application/json",
         timeout: 120000,
+      }), {
+        retries: UPLOAD_CONFIRM_RETRIES,
+        baseDelayMs: 1200,
       });
       onProgress?.(100);
       return payload;
+    }
+
+    async function uploadFileDirect(file, localItem, onProgress) {
+      const formData = new FormData();
+      formData.append("file", file);
+      try {
+        return await uploadFileRequest(`/jobs/${state.jobId}/files`, formData, (progress) => {
+          onProgress?.(progress);
+          if (progress >= 99) markUploadConfirming(localItem, "正在上传", file.name);
+        });
+      } catch (error) {
+        if (!shouldRetryUploadInChunks(error, file)) throw error;
+        return null;
+      }
     }
 
     function isMissingJobError(error) {
@@ -1412,7 +1471,7 @@ const helpItems = [
     }
 
     async function sendHeartbeat() {
-      if (!state.token || !state.jobId) return true;
+      if (!state.token || !state.jobId || state.activeUploads > 0) return true;
       try {
         await api(`/jobs/${state.jobId}/heartbeat`, { method: "POST", headers: authHeaders() });
         state.heartbeatFailures = 0;
@@ -1457,7 +1516,7 @@ const helpItems = [
           void sendHeartbeat();
         }, HEARTBEAT_INTERVAL_MS);
       }
-      if (immediate) void sendHeartbeat();
+      if (immediate && state.activeUploads === 0) void sendHeartbeat();
     }
 
     async function initializeSession() {
@@ -1547,10 +1606,10 @@ const helpItems = [
       renderFiles();
       try {
         await ensureJob();
-        await ensureHeartbeat({ immediate: true });
+        await ensureHeartbeat({ immediate: false });
         if (!state.jobId) {
           await ensureJob();
-          await ensureHeartbeat({ immediate: true });
+          await ensureHeartbeat({ immediate: false });
         }
         restoreLocalUploadItems(uploadQueue);
         renderFiles();
@@ -1570,30 +1629,31 @@ const helpItems = [
         const usesChunkedUpload = file.size > CHUNKED_UPLOAD_THRESHOLD;
         let uploadLabel = usesChunkedUpload ? "正在分片上传" : "正在上传";
         setStatus(`${uploadLabel} ${file.name}`);
+        state.activeUploads += 1;
         try {
           const onProgress = (progress) => {
             state.files = state.files.map((item) => item.id === localItem.id
-              ? { ...item, uploadProgress: progress }
+              ? { ...item, uploadProgress: progress, uploadStatusDetail: progress >= 99 ? item.uploadStatusDetail : "" }
               : item
             );
             renderFiles();
-            setStatus(`${uploadLabel} ${file.name} ${Math.round(progress)}%`);
+            if (progress >= 99) {
+              setStatus(`${uploadLabel} ${file.name}：等待服务器确认`);
+            } else {
+              setStatus(`${uploadLabel} ${file.name} ${Math.round(progress)}%`);
+            }
           };
           let payload;
           if (usesChunkedUpload) {
             payload = await uploadFileInChunks(file, localItem, onProgress);
           } else {
-            const formData = new FormData();
-            formData.append("file", file);
-            try {
-              payload = await uploadFileRequest(`/jobs/${state.jobId}/files`, formData, onProgress);
-            } catch (error) {
-              if (!shouldRetryUploadInChunks(error, file)) throw error;
+            payload = await uploadFileDirect(file, localItem, onProgress);
+            if (!payload) {
               uploadLabel = "单次上传失败，正在改用分片上传";
               setStatus(`${uploadLabel} ${file.name}`);
               showToast("单次上传失败，正在改用分片上传");
               state.files = state.files.map((item) => item.id === localItem.id
-                ? { ...item, uploadMode: "chunked", uploadProgress: 0 }
+                ? { ...item, uploadMode: "chunked", uploadProgress: 0, uploadStatusDetail: "" }
                 : item
               );
               renderFiles();
@@ -1617,6 +1677,9 @@ const helpItems = [
           renderFiles();
           setStatus(error.message || "文件上传失败。");
           showToast(error.message || "文件上传失败。");
+        } finally {
+          state.activeUploads = Math.max(0, state.activeUploads - 1);
+          if (state.activeUploads === 0) startHeartbeat({ immediate: true });
         }
       }
       if (hasUploadingFiles()) {
