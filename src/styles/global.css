@@ -853,6 +853,8 @@ textarea.field__control {
 }
 
 .planner-time-board {
+  --planner-lane-height: 3.85rem;
+  --planner-task-height: 3.3rem;
   display: none;
   overflow-x: auto;
   padding-bottom: var(--space-2);
@@ -915,7 +917,7 @@ textarea.field__control {
   display: grid;
   align-content: center;
   gap: 0.15rem;
-  min-height: calc(3.15rem * var(--lane-count, 1) + 0.8rem);
+  min-height: calc(var(--planner-lane-height) * var(--lane-count, 1) + 0.8rem);
   padding-right: var(--space-3);
 }
 
@@ -940,7 +942,7 @@ textarea.field__control {
 
 .planner-day-track {
   position: relative;
-  min-height: calc(3.15rem * var(--lane-count, 1) + 0.8rem);
+  min-height: calc(var(--planner-lane-height) * var(--lane-count, 1) + 0.8rem);
   border: 1px solid rgba(255, 255, 255, 0.075);
   border-radius: var(--radius-sm);
   background:
@@ -960,15 +962,15 @@ textarea.field__control {
 
 .planner-task-bar {
   position: absolute;
-  top: calc(0.4rem + var(--task-top, 0) * 3.15rem);
+  top: calc(0.4rem + var(--task-top, 0) * var(--planner-lane-height));
   left: var(--task-left);
   display: grid;
-  gap: 0.1rem;
+  gap: 0.18rem;
   align-content: center;
   width: var(--task-width);
   min-width: 2.25rem;
-  height: 2.75rem;
-  padding: 0.55rem 0.7rem;
+  height: var(--planner-task-height);
+  padding: 0.42rem 0.7rem;
   border: 1px solid color-mix(in srgb, var(--task-color) 50%, transparent);
   border-radius: var(--radius-sm);
   color: var(--color-text);
@@ -977,6 +979,7 @@ textarea.field__control {
     rgba(255, 255, 255, 0.055);
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.035);
   cursor: pointer;
+  line-height: 1.15;
   text-align: left;
 }
 

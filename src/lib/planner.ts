@@ -268,6 +268,14 @@ export function getTaskTimeRangeText(task: Pick<PlannerTask, "startTime" | "endT
   return `${task.startTime}-${task.endTime}`;
 }
 
+function compactTimeText(value: string): string {
+  return value.replace(/^0?(\d{1,2}):00$/, "$1").replace(/^0?(\d{1,2}):(\d{2})$/, "$1:$2");
+}
+
+export function getTaskCompactTimeRangeText(task: Pick<PlannerTask, "startTime" | "endTime">): string {
+  return `${compactTimeText(task.startTime)}-${compactTimeText(task.endTime)}`;
+}
+
 export function getTaskPosition(task: Pick<PlannerTask, "startTime" | "endTime">) {
   const start = Math.max(plannerStartMinute, Math.min(plannerEndMinute, getTaskStartMinutes(task)));
   const end = Math.max(start + 1, Math.min(plannerEndMinute, getTaskEndMinutes(task)));

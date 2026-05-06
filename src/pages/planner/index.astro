@@ -8,6 +8,7 @@ import {
   getPlannerDayTaskLayout,
   getPlannerPayload,
   getPlannerTaskType,
+  getTaskCompactTimeRangeText,
   getTaskPosition,
   getTaskTimeRangeText,
   plannerDays,
@@ -97,10 +98,11 @@ const plannerPayload = JSON.stringify(getPlannerPayload()).replace(/</g, "\\u003
                         type="button"
                         class="planner-task-bar"
                         data-task-id={task.id}
+                        title={`${getTaskTimeRangeText(task)} · ${type.label}${task.note ? ` · ${task.note}` : ""}`}
                         style={`--task-left: ${position.left}%; --task-width: ${position.width}%; --task-top: ${laneIndex}; --task-color: ${type.color};`}
                       >
                         <span>{task.title}</span>
-                        <em>{getTaskTimeRangeText(task)} · {type.label}</em>
+                        <em>{getTaskCompactTimeRangeText(task)}</em>
                       </button>
                     );
                   })}
@@ -329,6 +331,16 @@ const plannerPayload = JSON.stringify(getPlannerPayload()).replace(/</g, "\\u003
           return `${task.startTime}-${task.endTime}`;
         }
 
+        function compactTimeText(value) {
+          return String(value || "")
+            .replace(/^0?(\d{1,2}):00$/, "$1")
+            .replace(/^0?(\d{1,2}):(\d{2})$/, "$1:$2");
+        }
+
+        function compactTimeRangeText(task) {
+          return `${compactTimeText(task.startTime)}-${compactTimeText(task.endTime)}`;
+        }
+
         function setMessage(text, tone = "") {
           if (!message) return;
           message.textContent = text || "";
@@ -424,7 +436,7 @@ const plannerPayload = JSON.stringify(getPlannerPayload()).replace(/</g, "\\u003
               bar.type = "button";
               bar.className = "planner-task-bar";
               bar.dataset.taskId = task.id;
-              bar.title = task.note || task.title;
+              bar.title = `${timeRangeText(task)} · ${type.label}${task.note ? ` · ${task.note}` : ""}`;
               bar.style.setProperty("--task-left", `${position.left}%`);
               bar.style.setProperty("--task-width", `${position.width}%`);
               bar.style.setProperty("--task-top", String(laneIndex));
@@ -434,7 +446,7 @@ const plannerPayload = JSON.stringify(getPlannerPayload()).replace(/</g, "\\u003
               const title = document.createElement("span");
               title.textContent = task.title;
               const meta = document.createElement("em");
-              meta.textContent = `${timeRangeText(task)} · ${type.label}`;
+              meta.textContent = compactTimeRangeText(task);
               bar.append(title, meta);
               track.append(bar);
             }
