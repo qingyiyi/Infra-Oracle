@@ -18,6 +18,7 @@ import {
   validateAutoPublishReady,
   validateDraftData,
   dateValue,
+  timeoutMsFromArgs,
 } from "./radar-weekly-utils.mjs";
 import { generateWeeklyDraftMarkdown } from "./radar-weekly-generate.mjs";
 
@@ -49,6 +50,7 @@ Options:
   --mock-fail MODE          Mock a failing gate: few-items, low-credibility, low-highlight, bad-url.
   --dry-run                 Do not write the official issue, commit, or push.
   --no-push                 Commit locally but skip git push.
+  --timeout-ms N            Override SDK generation timeout for this run.
   --help                    Show command help.`);
 }
 
@@ -220,6 +222,7 @@ if (args.help) {
 const dryRun = Boolean(args["dry-run"]);
 const mock = Boolean(args.mock);
 const noPush = Boolean(args["no-push"]);
+const timeoutMs = timeoutMsFromArgs(args, undefined);
 const defaultWeek = previousCompleteWeek();
 const start = dateValue(args["week-start"] ?? dateOnly(defaultWeek.start));
 const end = dateValue(args["week-end"] ?? dateOnly(defaultWeek.end));
@@ -248,6 +251,7 @@ const markdown = await generateWeeklyDraftMarkdown({
   issueNumber,
   mock,
   mockFail: args["mock-fail"],
+  timeoutMs,
 });
 const { data, body } = parseMarkdownFrontmatter(markdown);
 const draftValidation = validateDraftData(data);

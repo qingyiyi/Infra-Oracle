@@ -10,10 +10,11 @@ import {
   issueNumberForWeek,
   parseArgs,
   previousCompleteWeek,
+  timeoutMsFromArgs,
 } from "./radar-weekly-utils.mjs";
 
 function usage() {
-  console.log(`Usage: scripts/radar-weekly.sh generate [--week-start YYYY-MM-DD --week-end YYYY-MM-DD] [--issue-number N] [--dry-run] [--mock] [--mock-fail MODE]`);
+  console.log(`Usage: scripts/radar-weekly.sh generate [--week-start YYYY-MM-DD --week-end YYYY-MM-DD] [--issue-number N] [--dry-run] [--mock] [--mock-fail MODE] [--timeout-ms N]`);
 }
 
 function buildMockItems({ start, year, issue, failMode }) {
@@ -248,7 +249,7 @@ async function postResponses(settings, input, signal) {
   return parts.join("\n").trim();
 }
 
-export async function generateWeeklyDraftMarkdown({ start, end, issueNumber, mock = false, mockFail = "" }) {
+export async function generateWeeklyDraftMarkdown({ start, end, issueNumber, mock = false, mockFail = "", timeoutMs }) {
   if (mock) {
     return buildMockDraft({ start, end, issueNumber, failMode: mockFail });
   }
@@ -257,9 +258,15 @@ export async function generateWeeklyDraftMarkdown({ start, end, issueNumber, moc
     throw new Error("RUNNER_SDK_API_KEY is not configured. Set it in the local Radar SDK environment or pass --mock for local workflow validation.");
   }
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), Number.isFinite(settings.timeoutMs) ? settings.timeoutMs : 120000);
+  const effectiveTimeoutMs = Number.isFinite(timeoutMs) ? timeoutMs : Number.isFinite(settings.timeoutMs) ? settings.timeoutMs : 120000;
+  const timeout = setTimeout(() => controller.abort(), effectiveTimeoutMs);
   try {
     return await postResponses(settings, buildPrompt({ start, end, issueNumber }), controller.signal);
+  } catch (error) {
+    if (error?.name === "AbortError") {
+      throw new Error(`SDK Responses request timed out after ${effectiveTimeoutMs}ms. Increase RUNNER_SDK_TIMEOUT_MS or pass --timeout-ms for this run.`);
+    }
+    throw error;
   } finally {
     clearTimeout(timeout);
   }
@@ -286,6 +293,7 @@ async function main() {
     issueNumber,
     mock: Boolean(args.mock),
     mockFail: args["mock-fail"],
+    timeoutMs: timeoutMsFromArgs(args, undefined),
   });
 
   if (!markdown.startsWith("---")) {

@@ -72,6 +72,15 @@ export function getSdkSettings() {
   };
 }
 
+export function timeoutMsFromArgs(args, fallback) {
+  if (args["timeout-ms"] === undefined) return fallback;
+  const timeoutMs = Number(args["timeout-ms"]);
+  if (!Number.isFinite(timeoutMs) || timeoutMs < 1000) {
+    throw new Error("--timeout-ms must be a number greater than or equal to 1000.");
+  }
+  return timeoutMs;
+}
+
 export function previousCompleteWeek(now = new Date()) {
   const local = new Date(now);
   const day = local.getDay();

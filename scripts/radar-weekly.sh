@@ -26,6 +26,7 @@ Common options:
   --dry-run                 Do not write files when supported.
   --mock                    Generate a local mock draft without SDK calls.
   --mock-fail MODE          Auto-publish/generate mock failure mode for local gate validation.
+  --timeout-ms N            Auto-publish/generate SDK timeout override.
   --check-links             Preview only: probe source and image URLs.
   --overwrite               Allow publish to overwrite an existing issue file.
   --no-push                 Auto-publish only: commit locally but skip git push.
