@@ -15,7 +15,8 @@
     "radar:generate": "bash scripts/radar-weekly.sh generate",
     "radar:preview": "bash scripts/radar-weekly.sh preview",
     "radar:publish": "bash scripts/radar-weekly.sh publish",
-    "radar:full": "bash scripts/radar-weekly.sh full"
+    "radar:full": "bash scripts/radar-weekly.sh full",
+    "radar:auto-publish": "bash scripts/radar-weekly.sh auto-publish"
   },
   "dependencies": {
     "astro": "^5.16.0",

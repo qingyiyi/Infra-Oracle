@@ -20,6 +20,7 @@
 # Public editorial helper scripts.
 !scripts/
 !scripts/radar-weekly.sh
+!scripts/radar-weekly-auto-publish.mjs
 !scripts/radar-weekly-generate.mjs
 !scripts/radar-weekly-preview.mjs
 !scripts/radar-weekly-publish.mjs

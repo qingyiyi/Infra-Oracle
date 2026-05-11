@@ -30,7 +30,7 @@ export function parseArgs(argv) {
       continue;
     }
     const key = arg.slice(2);
-    if (["dry-run", "mock", "overwrite", "help", "check-links"].includes(key)) {
+    if (["dry-run", "mock", "overwrite", "help", "check-links", "no-push"].includes(key)) {
       result[key] = true;
       continue;
     }
@@ -87,11 +87,18 @@ export function previousCompleteWeek(now = new Date()) {
 }
 
 export function dateOnly(date) {
-  return date.toISOString().slice(0, 10);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 export function dateValue(value) {
   if (value instanceof Date) return value;
+  if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    const [year, month, day] = value.split("-").map(Number);
+    return new Date(year, month - 1, day);
+  }
   if (typeof value === "string" || typeof value === "number") return new Date(value);
   return null;
 }
@@ -268,6 +275,162 @@ export function validatePublishReady(data) {
       errors.push(`items[${index}] has low credibility; keep it in candidate review instead of publishing.`);
     }
   }
+  return { errors, warnings };
+}
+
+function cloneData(data) {
+  return JSON.parse(JSON.stringify(data));
+}
+
+function normalizeDateField(value) {
+  const date = dateValue(value);
+  return date && Number.isFinite(date.getTime()) ? dateOnly(date) : value;
+}
+
+function sourceResultFor(sourceResults, item, index) {
+  if (!sourceResults) return { ok: true };
+  if (sourceResults instanceof Map) {
+    return sourceResults.get(item.id) ?? sourceResults.get(item.source_url) ?? sourceResults.get(index) ?? { ok: true };
+  }
+  if (Array.isArray(sourceResults)) {
+    return sourceResults[index] ?? { ok: true };
+  }
+  return sourceResults[item.id] ?? sourceResults[item.source_url] ?? sourceResults[index] ?? { ok: true };
+}
+
+function isValidUrl(value) {
+  try {
+    new URL(value);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function textLength(value) {
+  return typeof value === "string" ? value.trim().length : 0;
+}
+
+function completenessScore(item) {
+  let score = 0;
+  for (const field of ["summary", "why_it_matters", "background", "details", "impact"]) {
+    if (textLength(item[field]) >= 48) score += 1;
+  }
+  if (Array.isArray(item.watch_points) && item.watch_points.length >= 2) score += 1;
+  if (item.image_url && item.image_alt && item.image_source_url) score += 1;
+  return score;
+}
+
+function autoHighlightScore(item, sourceResult) {
+  let score = 0;
+  if (item.importance === "high") score += 60;
+  if (item.importance === "medium") score += 25;
+  if (item.credibility === "high") score += 40;
+  if (item.credibility === "medium") score += 18;
+  if (sourceResult?.ok !== false) score += 20;
+  score += completenessScore(item);
+  return score;
+}
+
+export function normalizeAutoPublishData(data, options = {}) {
+  const normalized = cloneData(data);
+  normalized.week_start = normalizeDateField(normalized.week_start);
+  normalized.week_end = normalizeDateField(normalized.week_end);
+  normalized.published_at = normalizeDateField(normalized.published_at);
+  normalized.items = Array.isArray(normalized.items) ? normalized.items : [];
+
+  for (const item of normalized.items) {
+    item.published_at = normalizeDateField(item.published_at);
+    item.highlight = false;
+  }
+
+  const ranked = normalized.items
+    .map((item, index) => ({
+      item,
+      index,
+      score: autoHighlightScore(item, sourceResultFor(options.sourceResults, item, index)),
+      sourceResult: sourceResultFor(options.sourceResults, item, index),
+    }))
+    .filter(({ item, sourceResult }) => item.credibility !== "low" && sourceResult?.ok !== false)
+    .sort((left, right) => right.score - left.score || left.index - right.index);
+
+  for (const entry of ranked.slice(0, 3)) {
+    entry.item.highlight = true;
+  }
+
+  return normalized;
+}
+
+export function validateAutoPublishReady(data, options = {}) {
+  const errors = [];
+  const warnings = [];
+  const items = Array.isArray(data.items) ? data.items : [];
+
+  if (isPlaceholderDraft(data)) {
+    errors.push("Refusing to auto-publish the placeholder draft. Generate a real weekly issue first.");
+  }
+  if (!["draft", "review", "published"].includes(data.editorial_status)) {
+    errors.push(`Invalid editorial_status for auto-publish: ${data.editorial_status}`);
+  }
+  if (items.length < 5) {
+    errors.push(`Auto-publish requires at least 5 items; received ${items.length}.`);
+  }
+
+  const highImportanceCount = items.filter((item) => item.importance === "high").length;
+  if (highImportanceCount < 2) {
+    errors.push(`Auto-publish requires at least 2 high-importance items; received ${highImportanceCount}.`);
+  }
+
+  const lowCredibility = items
+    .map((item, index) => ({ item, index }))
+    .filter(({ item }) => item.credibility === "low");
+  if (lowCredibility.length > 1) {
+    errors.push(`Auto-publish allows at most 1 low-credibility item; received ${lowCredibility.length}.`);
+  }
+  for (const { item, index } of lowCredibility) {
+    if (item.highlight) {
+      errors.push(`items[${index}] has low credibility and cannot be highlighted.`);
+    }
+  }
+
+  const sourceFailures = [];
+  items.forEach((item, index) => {
+    const result = sourceResultFor(options.sourceResults, item, index);
+    if (result?.ok === false) {
+      sourceFailures.push({ item, index });
+    }
+  });
+  if (sourceFailures.length > 1) {
+    errors.push(`Auto-publish allows at most 1 unreachable source_url; received ${sourceFailures.length}.`);
+  }
+  for (const { item, index } of sourceFailures) {
+    if (item.highlight) {
+      errors.push(`items[${index}] has an unreachable source_url and cannot be highlighted.`);
+    }
+  }
+
+  const highlightCount = items.filter((item) => item.highlight).length;
+  if (highlightCount !== 3) {
+    errors.push(`Auto-publish requires exactly 3 highlights after normalization; received ${highlightCount}.`);
+  }
+
+  items.forEach((item, index) => {
+    const label = `items[${index}]`;
+    if (item.image_url) {
+      if (!isValidUrl(item.image_url)) errors.push(`${label} image_url is not a valid URL.`);
+      if (!item.image_alt) errors.push(`${label} has image_url but lacks image_alt.`);
+      if (!item.image_source_url) {
+        errors.push(`${label} has image_url but lacks image_source_url.`);
+      } else if (!isValidUrl(item.image_source_url)) {
+        errors.push(`${label} image_source_url is not a valid URL.`);
+      }
+    }
+  });
+
+  if (items.length > 8) {
+    warnings.push(`Auto-publish will keep ${items.length} items; normal editorial target is 6-8.`);
+  }
+
   return { errors, warnings };
 }
 

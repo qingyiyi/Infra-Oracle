@@ -23,7 +23,7 @@ Infra-Oracle 是一个基于 Astro 的 static-first 技术展示站，面向 AI 
 
 ### 1. Weekly AI Infra Radar
 
-一个围绕 AI Infra / LLM / HPC 的精选周报模块，当前已经从展示原型升级为人工审查后的真实周报阅读面，并具备“首页最新一期 + 归档 + 单期详情”的公开路径。
+一个围绕 AI Infra / LLM / HPC 的精选周报模块，当前已经从展示原型升级为真实周报阅读面，并具备“首页最新一期 + 归档 + 单期详情”的公开路径。
 
 重点关注：
 
@@ -39,21 +39,23 @@ Infra-Oracle 是一个基于 Astro 的 static-first 技术展示站，面向 AI 
 
 - 每周一整理上一完整周，即上周一到上周日；当前已初始化 `2026 W17` 与 `2026 W18`
 - 首页只展示最新完整周报的 3 条重点大卡；缩略图使用外部官方 / 公开可展示 URL，授权不确定时回退到分类占位
-- SDK 联网脚本只能生成固定草稿 `src/content/radar/weekly-ai-infra-radar-draft.md`
+- 推荐入口是 `radar:auto-publish`：自动搜索上一完整周、自动评估质量、覆盖当期期号文件，并在验证通过后提交推送
+- SDK 联网脚本仍可生成固定草稿 `src/content/radar/weekly-ai-infra-radar-draft.md`
 - `preview` 用于检查结构、时间窗、栏目比例和来源字段
-- `publish` 需要人工把条目标为 `approved` 后才会写入正式 issue，默认拒绝覆盖已有期号
-- 最终发布必须保留人工审查入口
+- 自动质量闸门失败时会停止，不写正式 issue、不提交、不推送
+- 手动 `publish` 保留为 fallback，仍要求人工把条目标为 `approved`
 - 当前公开版本优先验证内容结构、深分析阅读方式、GitHub Pages 部署链路，以及候选内容与已发布 issue 的分离边界
 
 维护命令：
 
 ```bash
+npm run radar:auto-publish
 npm run radar:full
 npm run radar:preview
 npm run radar:publish
 ```
 
-这些命令不负责无人审核自动发布；`radar:full` 默认只生成候选并预览。
+默认本地验证可使用 `bash scripts/radar-weekly.sh auto-publish --dry-run --mock`，不会写正式 issue、commit 或 push。
 
 ### 2. Web Codex Runner
 
@@ -95,7 +97,7 @@ npm run radar:publish
 当前公开站点不做这些事：
 
 - 不做通用博客模板
-- 不做无人审核自动抓取和自动发布
+- 不做绕过质量闸门、凭证边界和 Git 提交范围防护的自动发布
 - 不在浏览器端直接持有模型密钥
 - 不承诺首版就提供真实远程执行和生产级运维链路
 - 不把 `Cyber Fortune` 做成严肃决策系统
@@ -174,3 +176,11 @@ npm run check
 - 构建产物和依赖目录
 
 如果你是在本地继续维护这个项目，产品定位和实现边界仍以本地工作区中的协作文档为准；这个 README 主要承担公开说明和快速上手入口。
+
+## 文档与许可证状态
+
+本地工作区保留 `docs/`、`.pipeline/` 和 `AGENTS.md` 等维护文档，但这些文件默认不进入公开 GitHub 仓库。当前 `docs/` 主要承担规划、运维、安全和内容模型记录，不是公开用户手册结构。
+
+本地文档入口包括 `docs/user-guide.md`、`docs/developer.md`、`docs/platforms/github-pages.md` 和 `docs/reference/document-map.md`，用于维护者在私有工作区继续同步 README、roadmap、部署和 Runner 边界。
+
+当前仓库尚未提供 `LICENSE` 文件，因此暂不声明开源许可证；如需开放复用，请先由维护者补充明确许可证文件。
