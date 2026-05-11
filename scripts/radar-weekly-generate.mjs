@@ -8,13 +8,14 @@ import {
   dumpMarkdown,
   getSdkSettings,
   issueNumberForWeek,
+  numberFromArgs,
   parseArgs,
   previousCompleteWeek,
   timeoutMsFromArgs,
 } from "./radar-weekly-utils.mjs";
 
 function usage() {
-  console.log(`Usage: scripts/radar-weekly.sh generate [--week-start YYYY-MM-DD --week-end YYYY-MM-DD] [--issue-number N] [--dry-run] [--mock] [--mock-fail MODE] [--timeout-ms N]`);
+  console.log(`Usage: scripts/radar-weekly.sh generate [--week-start YYYY-MM-DD --week-end YYYY-MM-DD] [--issue-number N] [--dry-run] [--mock] [--mock-fail MODE] [--timeout-ms N] [--retries N] [--retry-delay-ms N]`);
 }
 
 function buildMockItems({ start, year, issue, failMode }) {
@@ -234,7 +235,9 @@ async function postResponses(settings, input, signal) {
   });
   const raw = await response.text();
   if (!response.ok) {
-    throw new Error(`SDK Responses request failed with status ${response.status}.`);
+    const error = new Error(`SDK Responses request failed with status ${response.status}.`);
+    error.status = response.status;
+    throw error;
   }
   const body = raw ? JSON.parse(raw) : {};
   if (typeof body.output_text === "string" && body.output_text.trim()) {
@@ -249,7 +252,28 @@ async function postResponses(settings, input, signal) {
   return parts.join("\n").trim();
 }
 
-export async function generateWeeklyDraftMarkdown({ start, end, issueNumber, mock = false, mockFail = "", timeoutMs }) {
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function isRetryableSdkError(error) {
+  return error?.name === "AbortError" || [429, 502, 503, 504].includes(error?.status);
+}
+
+function sdkFailureMessage(error, { timeoutMs, retries }) {
+  if (error?.name === "AbortError") {
+    return `SDK Responses request timed out after ${timeoutMs}ms. Increase RUNNER_SDK_TIMEOUT_MS or pass --timeout-ms for this run.`;
+  }
+  if (error?.status === 504) {
+    return `SDK Responses gateway timed out with status 504 after ${retries + 1} attempt(s). The SDK gateway/model web-search request did not finish in time; retry later, reduce prompt scope, or check the private SDK service.`;
+  }
+  if ([429, 502, 503].includes(error?.status)) {
+    return `SDK Responses request failed with retryable status ${error.status} after ${retries + 1} attempt(s). Retry later or check the private SDK service.`;
+  }
+  return error?.message ?? String(error);
+}
+
+export async function generateWeeklyDraftMarkdown({ start, end, issueNumber, mock = false, mockFail = "", timeoutMs, retries, retryDelayMs }) {
   if (mock) {
     return buildMockDraft({ start, end, issueNumber, failMode: mockFail });
   }
@@ -257,19 +281,26 @@ export async function generateWeeklyDraftMarkdown({ start, end, issueNumber, moc
   if (!settings.apiKey) {
     throw new Error("RUNNER_SDK_API_KEY is not configured. Set it in the local Radar SDK environment or pass --mock for local workflow validation.");
   }
-  const controller = new AbortController();
   const effectiveTimeoutMs = Number.isFinite(timeoutMs) ? timeoutMs : Number.isFinite(settings.timeoutMs) ? settings.timeoutMs : 120000;
-  const timeout = setTimeout(() => controller.abort(), effectiveTimeoutMs);
-  try {
-    return await postResponses(settings, buildPrompt({ start, end, issueNumber }), controller.signal);
-  } catch (error) {
-    if (error?.name === "AbortError") {
-      throw new Error(`SDK Responses request timed out after ${effectiveTimeoutMs}ms. Increase RUNNER_SDK_TIMEOUT_MS or pass --timeout-ms for this run.`);
+  const effectiveRetries = Number.isFinite(retries) ? retries : Number.isFinite(settings.retries) ? settings.retries : 2;
+  const effectiveRetryDelayMs = Number.isFinite(retryDelayMs) ? retryDelayMs : Number.isFinite(settings.retryDelayMs) ? settings.retryDelayMs : 5000;
+  const input = buildPrompt({ start, end, issueNumber });
+  let lastError;
+  for (let attempt = 0; attempt <= effectiveRetries; attempt += 1) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), effectiveTimeoutMs);
+    try {
+      return await postResponses(settings, input, controller.signal);
+    } catch (error) {
+      lastError = error;
+      if (!isRetryableSdkError(error) || attempt === effectiveRetries) break;
+      console.warn(`SDK generation attempt ${attempt + 1} failed with ${error.status ?? error.name}; retrying in ${effectiveRetryDelayMs}ms.`);
+      await sleep(effectiveRetryDelayMs);
+    } finally {
+      clearTimeout(timeout);
     }
-    throw error;
-  } finally {
-    clearTimeout(timeout);
   }
+  throw new Error(sdkFailureMessage(lastError, { timeoutMs: effectiveTimeoutMs, retries: effectiveRetries }));
 }
 
 async function main() {
@@ -294,6 +325,8 @@ async function main() {
     mock: Boolean(args.mock),
     mockFail: args["mock-fail"],
     timeoutMs: timeoutMsFromArgs(args, undefined),
+    retries: numberFromArgs(args, "retries", undefined, 0),
+    retryDelayMs: numberFromArgs(args, "retry-delay-ms", undefined, 0),
   });
 
   if (!markdown.startsWith("---")) {

@@ -19,6 +19,7 @@ import {
   validateDraftData,
   dateValue,
   timeoutMsFromArgs,
+  numberFromArgs,
 } from "./radar-weekly-utils.mjs";
 import { generateWeeklyDraftMarkdown } from "./radar-weekly-generate.mjs";
 
@@ -51,6 +52,8 @@ Options:
   --dry-run                 Do not write the official issue, commit, or push.
   --no-push                 Commit locally but skip git push.
   --timeout-ms N            Override SDK generation timeout for this run.
+  --retries N               Override SDK generation retry count.
+  --retry-delay-ms N        Override SDK generation retry delay.
   --help                    Show command help.`);
 }
 
@@ -223,6 +226,8 @@ const dryRun = Boolean(args["dry-run"]);
 const mock = Boolean(args.mock);
 const noPush = Boolean(args["no-push"]);
 const timeoutMs = timeoutMsFromArgs(args, undefined);
+const retries = numberFromArgs(args, "retries", undefined, 0);
+const retryDelayMs = numberFromArgs(args, "retry-delay-ms", undefined, 0);
 const defaultWeek = previousCompleteWeek();
 const start = dateValue(args["week-start"] ?? dateOnly(defaultWeek.start));
 const end = dateValue(args["week-end"] ?? dateOnly(defaultWeek.end));
@@ -252,6 +257,8 @@ const markdown = await generateWeeklyDraftMarkdown({
   mock,
   mockFail: args["mock-fail"],
   timeoutMs,
+  retries,
+  retryDelayMs,
 });
 const { data, body } = parseMarkdownFrontmatter(markdown);
 const draftValidation = validateDraftData(data);

@@ -68,6 +68,8 @@ export function getSdkSettings() {
     apiKey: read("RUNNER_SDK_API_KEY"),
     model: read("RUNNER_SDK_MODEL", read("RUNNER_CODEX_MODEL", "gpt-5.5")),
     timeoutMs: Number(read("RUNNER_SDK_TIMEOUT_MS", "120000")),
+    retries: Number(read("RUNNER_SDK_RETRIES", "2")),
+    retryDelayMs: Number(read("RUNNER_SDK_RETRY_DELAY_MS", "5000")),
     envPath,
   };
 }
@@ -79,6 +81,15 @@ export function timeoutMsFromArgs(args, fallback) {
     throw new Error("--timeout-ms must be a number greater than or equal to 1000.");
   }
   return timeoutMs;
+}
+
+export function numberFromArgs(args, key, fallback, minimum = 0) {
+  if (args[key] === undefined) return fallback;
+  const value = Number(args[key]);
+  if (!Number.isFinite(value) || value < minimum) {
+    throw new Error(`--${key} must be a number greater than or equal to ${minimum}.`);
+  }
+  return value;
 }
 
 export function previousCompleteWeek(now = new Date()) {
