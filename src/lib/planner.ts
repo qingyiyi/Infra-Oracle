@@ -1,4 +1,6 @@
 export const plannerStorageKey = "infra-oracle.weekly-planner.v2";
+export const plannerExportSchema = "infra-oracle.weekly-planner.export";
+export const plannerExportVersion = 1;
 
 export const plannerStartMinute = 6 * 60;
 export const plannerEndMinute = 24 * 60;
@@ -362,6 +364,8 @@ export function normalizePlannerTasks(values: unknown): PlannerTask[] {
 export function getPlannerPayload() {
   return {
     storageKey: plannerStorageKey,
+    exportSchema: plannerExportSchema,
+    exportVersion: plannerExportVersion,
     days: plannerDays,
     taskTypes: plannerTaskTypes,
     defaultTasks: defaultPlannerTasks,

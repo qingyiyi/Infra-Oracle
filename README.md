@@ -42,7 +42,7 @@ Infra-Oracle 是一个基于 Astro 的 static-first 技术展示站，面向 AI 
 - 推荐入口是 `radar:auto-publish`：自动搜索上一完整周、自动评估质量、覆盖当期期号文件，并在验证通过后提交推送
 - SDK 联网脚本仍可生成固定草稿 `src/content/radar/weekly-ai-infra-radar-draft.md`
 - `preview` 用于检查结构、时间窗、栏目比例和来源字段
-- 自动质量闸门失败时会停止，不写正式 issue、不提交、不推送
+- 自动质量闸门会检查来源 URL、来源分数、可信度、重点条目和图片字段；失败时会停止，不写正式 issue、不提交、不推送
 - 手动 `publish` 保留为 fallback，仍要求人工把条目标为 `approved`
 - 当前公开版本优先验证内容结构、深分析阅读方式、GitHub Pages 部署链路，以及候选内容与已发布 issue 的分离边界
 
@@ -79,7 +79,7 @@ npm run radar:publish
 - 首页首屏按钮下方展示同一份本周计划的转置甘特图，横轴为周一到周日，纵轴为 `06:00-24:00`
 - 数据以当前浏览器为单位保存，不会写回 GitHub，也不会同步到后端
 - 时间轴范围为每天 `06:00-24:00`，横轴按小时展示，任务位置按分钟比例计算
-- 首版通过表单新增、编辑、删除和重置示例任务；拖拽调整、多周切换和导入导出作为后续增强
+- 支持表单新增、编辑、删除、重置示例任务，以及 JSON 导入 / 导出；拖拽调整、多周切换和颜色自定义作为后续增强
 
 ### 4. Cyber Fortune 首页小组件
 
@@ -183,4 +183,4 @@ npm run check
 
 本地文档入口包括 `docs/user-guide.md`、`docs/developer.md`、`docs/platforms/github-pages.md` 和 `docs/reference/document-map.md`，用于维护者在私有工作区继续同步 README、roadmap、部署和 Runner 边界。
 
-当前仓库尚未提供 `LICENSE` 文件，因此暂不声明开源许可证；如需开放复用，请先由维护者补充明确许可证文件。
+当前仓库尚未提供 `LICENSE` 文件，因此暂不声明开源许可证；这不等同于开源授权。外部复用代码、内容、Radar 周报文本或视觉资产前，需要先由维护者明确许可策略并补充许可证文件。

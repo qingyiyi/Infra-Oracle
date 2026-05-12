@@ -21,6 +21,49 @@ export const allowedSourceTypes = new Set([
 ]);
 export const allowedLevels = new Set(["high", "medium", "low"]);
 
+export const radarSourceScoreThresholds = {
+  publishMinimum: 55,
+  highlightMinimum: 70,
+  highImportanceMinimum: 70,
+  lowSourceMaximum: 1,
+};
+
+const sourceTypeBaseScores = {
+  paper: 82,
+  repo: 78,
+  release_notes: 80,
+  official_docs: 82,
+  product_update: 76,
+  company_announcement: 80,
+  policy: 82,
+  blog: 58,
+  news: 48,
+};
+
+const stableOfficialSources = [
+  { label: "OpenAI", domains: ["openai.com", "platform.openai.com", "cookbook.openai.com"], prefixes: ["https://github.com/openai/"] },
+  { label: "Anthropic", domains: ["anthropic.com"] },
+  { label: "NVIDIA", domains: ["nvidia.com", "developer.nvidia.com", "blogs.nvidia.com", "investor.nvidia.com"], prefixes: ["https://github.com/nvidia/"] },
+  { label: "AWS", domains: ["aws.amazon.com", "amazon.science"] },
+  { label: "Google Cloud", domains: ["cloud.google.com", "googlecloudplatform.github.io"] },
+  { label: "Google AI", domains: ["ai.google.dev", "research.google", "blog.google", "developers.googleblog.com"] },
+  { label: "Microsoft", domains: ["microsoft.com", "azure.microsoft.com", "devblogs.microsoft.com", "blogs.microsoft.com"] },
+  { label: "Meta AI", domains: ["ai.meta.com", "engineering.fb.com", "github.com/facebookresearch"] },
+  { label: "Qwen", domains: ["qwen.ai", "alibabacloud.com"], prefixes: ["https://github.com/qwenlm/"] },
+  { label: "DeepSeek", domains: ["deepseek.com", "api-docs.deepseek.com"], prefixes: ["https://github.com/deepseek-ai/"] },
+  { label: "Khronos", domains: ["khronos.org"] },
+  { label: "arXiv", domains: ["arxiv.org"] },
+];
+
+const trustedMediaSources = [
+  { label: "Reuters", domains: ["reuters.com"] },
+  { label: "Associated Press", domains: ["apnews.com"] },
+  { label: "The Register", domains: ["theregister.com"] },
+  { label: "The Verge", domains: ["theverge.com"] },
+  { label: "TechCrunch", domains: ["techcrunch.com"] },
+  { label: "MIT Technology Review", domains: ["technologyreview.com"] },
+];
+
 export function parseArgs(argv) {
   const result = { _: [] };
   for (let index = 0; index < argv.length; index += 1) {
@@ -400,6 +443,83 @@ function isValidUrl(value) {
   }
 }
 
+function hostnameFor(value) {
+  try {
+    return new URL(value).hostname.toLowerCase().replace(/^www\./, "");
+  } catch {
+    return "";
+  }
+}
+
+function hostMatchesDomain(hostname, domain) {
+  const normalized = domain.toLowerCase().replace(/^www\./, "");
+  return hostname === normalized || hostname.endsWith(`.${normalized}`);
+}
+
+function sourceMatchFromList(hostname, url, sources) {
+  if (!hostname) return null;
+  const normalizedUrl = typeof url === "string" ? url.toLowerCase() : "";
+  return (
+    sources.find(
+      (source) =>
+        source.domains.some((domain) => hostMatchesDomain(hostname, domain)) ||
+        (source.prefixes ?? []).some((prefix) => normalizedUrl.startsWith(prefix.toLowerCase())),
+    ) ?? null
+  );
+}
+
+function isOriginalSourceType(sourceType) {
+  return ["paper", "repo", "release_notes", "official_docs", "product_update", "company_announcement", "policy"].includes(sourceType);
+}
+
+export function scoreRadarSource(item, sourceResult = { ok: true }) {
+  const sourceType = item?.source_type;
+  const hostname = hostnameFor(item?.source_url);
+  const officialSource = sourceMatchFromList(hostname, item?.source_url, stableOfficialSources);
+  const trustedMedia = sourceMatchFromList(hostname, item?.source_url, trustedMediaSources);
+  let score = sourceTypeBaseScores[sourceType] ?? 40;
+  const reasons = [];
+
+  if (officialSource) {
+    score += 12;
+    reasons.push(`stable-official:${officialSource.label}`);
+  } else if (trustedMedia) {
+    score += 8;
+    reasons.push(`trusted-media:${trustedMedia.label}`);
+  } else if (sourceType === "news") {
+    score -= 8;
+    reasons.push("news-not-in-trusted-list");
+  } else if (sourceType === "blog") {
+    score -= 4;
+    reasons.push("blog-not-in-stable-list");
+  }
+
+  if (isOriginalSourceType(sourceType)) reasons.push("original-source-type");
+  if (sourceResult?.ok === false) {
+    score -= 30;
+    reasons.push("unreachable-source-url");
+  }
+  if (item?.credibility === "high") score += 8;
+  if (item?.credibility === "medium") score += 2;
+  if (item?.credibility === "low") {
+    score -= 24;
+    reasons.push("low-credibility");
+  }
+
+  const clampedScore = Math.max(0, Math.min(100, score));
+  let level = "medium";
+  if (clampedScore >= 70) level = "high";
+  if (clampedScore < 55) level = "low";
+  return {
+    score: clampedScore,
+    level,
+    hostname,
+    stable: Boolean(officialSource),
+    sourceLabel: officialSource?.label ?? trustedMedia?.label ?? hostname,
+    reasons,
+  };
+}
+
 function textLength(value) {
   return typeof value === "string" ? value.trim().length : 0;
 }
@@ -428,12 +548,14 @@ function completenessScore(item) {
 }
 
 function autoHighlightScore(item, sourceResult) {
+  const sourceScore = scoreRadarSource(item, sourceResult);
   let score = 0;
   if (item.importance === "high") score += 60;
   if (item.importance === "medium") score += 25;
   if (item.credibility === "high") score += 40;
   if (item.credibility === "medium") score += 18;
   if (sourceResult?.ok !== false) score += 20;
+  score += Math.round(sourceScore.score / 4);
   score += completenessScore(item);
   return score;
 }
@@ -465,7 +587,14 @@ export function normalizeAutoPublishData(data, options = {}) {
       score: autoHighlightScore(item, sourceResultFor(options.sourceResults, item, index)),
       sourceResult: sourceResultFor(options.sourceResults, item, index),
     }))
-    .filter(({ item, sourceResult }) => item.credibility !== "low" && sourceResult?.ok !== false)
+    .filter(({ item, sourceResult }) => {
+      const sourceScore = scoreRadarSource(item, sourceResult);
+      return (
+        item.credibility !== "low" &&
+        sourceResult?.ok !== false &&
+        sourceScore.score >= radarSourceScoreThresholds.highlightMinimum
+      );
+    })
     .sort((left, right) => right.score - left.score || left.index - right.index);
 
   for (const entry of ranked.slice(0, 3)) {
@@ -488,6 +617,29 @@ export function validateAutoPublishReady(data, options = {}) {
   }
   if (items.length < 5) {
     errors.push(`Auto-publish requires at least 5 items; received ${items.length}.`);
+  }
+
+  const sourceScores = items.map((item, index) => ({
+    item,
+    index,
+    sourceResult: sourceResultFor(options.sourceResults, item, index),
+    sourceScore: scoreRadarSource(item, sourceResultFor(options.sourceResults, item, index)),
+  }));
+  const lowSourceScores = sourceScores.filter(({ sourceScore }) => sourceScore.score < radarSourceScoreThresholds.publishMinimum);
+  if (lowSourceScores.length > radarSourceScoreThresholds.lowSourceMaximum) {
+    errors.push(
+      `Auto-publish allows at most ${radarSourceScoreThresholds.lowSourceMaximum} low source-score item; received ${lowSourceScores.length}.`,
+    );
+  }
+  for (const { item, index, sourceScore } of sourceScores) {
+    if (item.highlight && sourceScore.score < radarSourceScoreThresholds.highlightMinimum) {
+      errors.push(`items[${index}] source score ${sourceScore.score} is too low for highlight; minimum is ${radarSourceScoreThresholds.highlightMinimum}.`);
+    }
+    if (item.importance === "high" && sourceScore.score < radarSourceScoreThresholds.highImportanceMinimum) {
+      errors.push(
+        `items[${index}] is high importance but source score ${sourceScore.score} is below ${radarSourceScoreThresholds.highImportanceMinimum}; use official, primary, paper, release, government, or trusted primary reporting.`,
+      );
+    }
   }
 
   const highImportanceCount = items.filter((item) => item.importance === "high").length;

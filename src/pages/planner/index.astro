@@ -120,13 +120,19 @@ const plannerPayload = JSON.stringify(getPlannerPayload()).replace(/</g, "\\u003
             {defaultPlannerTasks.filter((task) => task.day === day.index).map((task) => {
               const type = getPlannerTaskType(task.type);
               return (
-                <article class="planner-mobile-item" style={`--task-color: ${type.color};`}>
+                <button
+                  type="button"
+                  class="planner-mobile-item"
+                  style={`--task-color: ${type.color};`}
+                  data-task-id={task.id}
+                  aria-label={`编辑 ${task.title}，${getTaskTimeRangeText(task)}`}
+                >
                   <div>
                     <strong>{task.title}</strong>
                     <span>{getTaskTimeRangeText(task)} · {task.note}</span>
                   </div>
                   <em>{type.label}</em>
-                </article>
+                </button>
               );
             })}
           </section>
@@ -208,6 +214,19 @@ const plannerPayload = JSON.stringify(getPlannerPayload()).replace(/</g, "\\u003
           ))}
         </div>
       </Panel>
+
+      <Panel as="section" tone="subtle" padding="lg" class="planner-transfer-card">
+        <p class="mono-label">Backup</p>
+        <h2 class="title-3">把这周先存一份。</h2>
+        <p class="body-sm">
+          导出 JSON 可以换浏览器或换设备时导入。导入会覆盖当前浏览器里的本周计划。
+        </p>
+        <div class="action-row">
+          <button type="button" class="button button--secondary button--md" data-planner-export>导出 JSON</button>
+          <button type="button" class="button button--ghost button--md" data-planner-import>导入 JSON</button>
+        </div>
+        <input type="file" accept="application/json,.json" data-planner-import-file hidden />
+      </Panel>
     </div>
 
     <script is:inline type="application/json" data-planner-data set:html={plannerPayload}></script>
@@ -224,6 +243,9 @@ const plannerPayload = JSON.stringify(getPlannerPayload()).replace(/</g, "\\u003
         const cancelButton = document.querySelector("[data-planner-cancel]");
         const deleteButton = document.querySelector("[data-planner-delete]");
         const resetButton = document.querySelector("[data-planner-reset]");
+        const exportButton = document.querySelector("[data-planner-export]");
+        const importButton = document.querySelector("[data-planner-import]");
+        const importFileInput = document.querySelector("[data-planner-import-file]");
         const typeButtons = document.querySelectorAll("[data-planner-type]");
 
         if (!app || !dataNode || !rows || !mobileList || !form) return;
@@ -241,6 +263,8 @@ const plannerPayload = JSON.stringify(getPlannerPayload()).replace(/</g, "\\u003
         const defaultTasks = Array.isArray(payload.defaultTasks) ? payload.defaultTasks : [];
         const typeMap = new Map(types.map((type) => [type.id, type]));
         const storageKey = payload.storageKey || "infra-oracle.weekly-planner.v2";
+        const exportSchema = payload.exportSchema || "infra-oracle.weekly-planner.export";
+        const exportVersion = Number(payload.exportVersion || 1);
         const startMinute = Number(payload.startMinute || 360);
         const endMinute = Number(payload.endMinute || 1440);
         const totalMinutes = endMinute - startMinute;
@@ -321,6 +345,68 @@ const plannerPayload = JSON.stringify(getPlannerPayload()).replace(/</g, "\\u003
 
         function saveTasks() {
           window.localStorage.setItem(storageKey, JSON.stringify(tasks));
+        }
+
+        function getPlannerExportPayload() {
+          return {
+            schema: exportSchema,
+            version: exportVersion,
+            exportedAt: new Date().toISOString(),
+            app: "Infra-Oracle Weekly Planner",
+            storageKey,
+            timeWindow: {
+              start: minutesToTime(startMinute),
+              end: minutesToTime(endMinute),
+            },
+            tasks,
+          };
+        }
+
+        function getExportFileName() {
+          const date = new Date().toISOString().slice(0, 10);
+          return `infra-oracle-planner-${date}.json`;
+        }
+
+        function downloadTextFile(fileName, content, mimeType = "application/json") {
+          const blob = new Blob([content], { type: `${mimeType};charset=utf-8` });
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement("a");
+          link.href = url;
+          link.download = fileName;
+          link.style.display = "none";
+          document.body.append(link);
+          link.click();
+          link.remove();
+          URL.revokeObjectURL(url);
+        }
+
+        function getImportTaskSource(parsed) {
+          if (Array.isArray(parsed)) return parsed;
+          if (!parsed || typeof parsed !== "object") return null;
+          if (parsed.schema && parsed.schema !== exportSchema) return null;
+          if (parsed.version && Number(parsed.version) > exportVersion) return null;
+          return Array.isArray(parsed.tasks) ? parsed.tasks : null;
+        }
+
+        function importPlannerJson(text) {
+          let parsed;
+          try {
+            parsed = JSON.parse(text);
+          } catch {
+            throw new Error("这个 JSON 解析失败了。");
+          }
+
+          const rawTasks = getImportTaskSource(parsed);
+          if (!rawTasks) {
+            throw new Error("没有找到可导入的 Planner tasks，或文件版本暂不支持。");
+          }
+
+          const nextTasks = normalizeTasks(rawTasks);
+          if (!nextTasks.length) {
+            throw new Error("文件里没有可用安排。");
+          }
+
+          return nextTasks;
         }
 
         function taskType(task) {
@@ -484,8 +570,11 @@ const plannerPayload = JSON.stringify(getPlannerPayload()).replace(/</g, "\\u003
 
             for (const task of dayTasks) {
               const type = taskType(task);
-              const item = document.createElement("article");
+              const item = document.createElement("button");
+              item.type = "button";
               item.className = "planner-mobile-item";
+              item.dataset.taskId = task.id;
+              item.setAttribute("aria-label", `编辑 ${task.title}，${timeRangeText(task)}`);
               item.style.setProperty("--task-color", type.color);
               const copy = document.createElement("div");
               const mobileTitle = document.createElement("strong");
@@ -580,6 +669,44 @@ const plannerPayload = JSON.stringify(getPlannerPayload()).replace(/</g, "\\u003
           render();
           resetForm();
           setMessage("示例已恢复。", "success");
+        });
+        exportButton?.addEventListener("click", () => {
+          const content = JSON.stringify(getPlannerExportPayload(), null, 2);
+          downloadTextFile(getExportFileName(), content);
+          setMessage("已导出 JSON。", "success");
+        });
+        importButton?.addEventListener("click", () => {
+          importFileInput?.click();
+        });
+        importFileInput?.addEventListener("change", async () => {
+          const file = importFileInput.files?.[0];
+          importFileInput.value = "";
+          if (!file) return;
+
+          if (!file.name.toLowerCase().endsWith(".json")) {
+            setMessage("请选择 .json 文件。", "error");
+            return;
+          }
+
+          let nextTasks;
+          try {
+            nextTasks = importPlannerJson(await file.text());
+          } catch (error) {
+            setMessage(error instanceof Error ? error.message : "导入失败。", "error");
+            return;
+          }
+
+          const confirmed = window.confirm(`导入后会覆盖当前 ${tasks.length} 条安排，改为文件里的 ${nextTasks.length} 条。继续吗？`);
+          if (!confirmed) {
+            setMessage("已取消导入。");
+            return;
+          }
+
+          tasks = nextTasks;
+          saveTasks();
+          render();
+          resetForm();
+          setMessage(`已导入 ${tasks.length} 条安排。`, "success");
         });
         typeButtons.forEach((button) => {
           button.addEventListener("click", () => {

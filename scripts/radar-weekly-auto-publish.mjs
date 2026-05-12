@@ -13,6 +13,7 @@ import {
   parseArgs,
   parseMarkdownFrontmatter,
   previousCompleteWeek,
+  scoreRadarSource,
   repoRoot,
   slugForIssue,
   validateAutoPublishReady,
@@ -48,7 +49,7 @@ Options:
   --week-end YYYY-MM-DD     Override the Sunday end date.
   --issue-number N          Override issue number.
   --mock                    Generate deterministic local mock content.
-  --mock-fail MODE          Mock a failing gate: few-items, low-credibility, low-highlight, bad-url.
+  --mock-fail MODE          Mock a failing gate: few-items, low-credibility, low-highlight, bad-url, weak-source.
   --dry-run                 Do not write the official issue, commit, or push.
   --no-push                 Commit locally but skip git push.
   --timeout-ms N            Override SDK generation timeout for this run.
@@ -160,7 +161,8 @@ function summarizeSourceResults(items, sourceResults) {
   return items.map((item, index) => {
     const result = sourceResults.get(item.id) ?? sourceResults.get(index) ?? { ok: false };
     const status = result.status ?? (result.ok ? "ok" : "failed");
-    return `${result.ok ? "ok" : "fail"} ${status} ${item.source_url}`;
+    const sourceScore = scoreRadarSource(item, result);
+    return `${result.ok ? "ok" : "fail"} ${status} score=${sourceScore.score}/${sourceScore.level} ${item.source_url}`;
   });
 }
 
@@ -190,6 +192,7 @@ function printGateResult({ data, sourceResults, target, commitMessage, dryRun, n
   console.log(`High importance: ${items.filter((item) => item.importance === "high").length}`);
   console.log(`Low credibility: ${items.filter((item) => item.credibility === "low").length}`);
   console.log(`Highlights: ${items.filter((item) => item.highlight).map((item) => item.id).join(", ")}`);
+  console.log(`Source score: min=${Math.min(...items.map((item, index) => scoreRadarSource(item, sourceResults.get(item.id) ?? sourceResults.get(index)).score))}`);
   console.log(`Target: ${rel(target)}`);
   console.log("\nSource URL check:");
   for (const line of summarizeSourceResults(items, sourceResults)) console.log(`- ${line}`);
@@ -240,7 +243,13 @@ assertWeek(start, end);
 
 const gitReady = assertGitReady({ dryRun });
 for (const warning of gitReady.warnings) console.warn(`Dry-run warning: ${warning}`);
-const baselineDirtyPaths = assertCleanCommitScope("Pre-generation guard");
+let baselineDirtyPaths = [];
+try {
+  baselineDirtyPaths = assertCleanCommitScope("Pre-generation guard");
+} catch (error) {
+  if (!dryRun) throw error;
+  console.warn(`Dry-run warning: ${error.message}`);
+}
 if (baselineDirtyPaths.length) {
   const message = `Pre-generation guard found existing allowed dirty paths:\n${baselineDirtyPaths.map((filePath) => `- ${filePath}`).join("\n")}`;
   if (dryRun) {

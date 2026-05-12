@@ -1054,6 +1054,9 @@ textarea.field__control {
   border-radius: var(--radius-sm);
   background: rgba(255, 255, 255, 0.03);
   cursor: pointer;
+  color: inherit;
+  font: inherit;
+  text-align: left;
 }
 
 .planner-mobile-item div {
@@ -1958,6 +1961,26 @@ textarea.field__control {
   background: rgba(255, 138, 122, 0.1);
 }
 
+.assistant-history-item__main:focus-visible,
+.assistant-history-item__delete:focus-visible,
+.assistant-help-trigger:focus-visible,
+.assistant-menu-trigger:focus-visible,
+.assistant-send:focus-visible,
+.assistant-chip:focus-visible,
+.assistant-upload-button:focus-visible,
+.assistant-menu-button:focus-visible,
+.assistant-retry:focus-visible,
+.assistant-access-form input:focus-visible,
+.assistant-access-form button:focus-visible,
+.assistant-file-chip button:focus-visible,
+.assistant-trace__toggle:focus-visible,
+.assistant-trace-row__raw summary:focus-visible,
+.assistant-diff-review summary:focus-visible,
+.assistant-diff-review__download:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+}
+
 .assistant-chat {
   display: grid;
   grid-template-rows: minmax(0, 1fr) auto;
@@ -2829,6 +2852,11 @@ textarea.field__control {
   background: transparent;
 }
 
+.assistant-input-row:focus-within {
+  border-color: var(--color-border-accent);
+  box-shadow: var(--shadow-focus);
+}
+
 .assistant-input-row textarea::placeholder {
   color: var(--color-text-muted);
 }
@@ -2891,9 +2919,9 @@ textarea.field__control {
   pointer-events: none;
   transform: translateY(-0.25rem);
   transition:
-    opacity var(--duration-fast) var(--ease-standard),
-    transform var(--duration-fast) var(--ease-standard),
-    visibility var(--duration-fast) var(--ease-standard);
+    opacity var(--duration-fast) var(--easing-standard),
+    transform var(--duration-fast) var(--easing-standard),
+    visibility var(--duration-fast) var(--easing-standard);
 }
 
 .assistant-menu .assistant-popover {
@@ -2902,9 +2930,9 @@ textarea.field__control {
   pointer-events: none;
   transform: translateY(0.25rem);
   transition:
-    opacity var(--duration-fast) var(--ease-standard),
-    transform var(--duration-fast) var(--ease-standard),
-    visibility var(--duration-fast) var(--ease-standard);
+    opacity var(--duration-fast) var(--easing-standard),
+    transform var(--duration-fast) var(--easing-standard),
+    visibility var(--duration-fast) var(--easing-standard);
 }
 
 .assistant-menu--open .assistant-popover {

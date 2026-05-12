@@ -160,6 +160,18 @@ function buildMockItems({ start, year, issue, failMode }) {
   if (failMode === "bad-url") {
     return items.map((item, index) => (index >= 4 ? { ...item, source_url: `https://invalid.invalid/radar-${index}` } : item));
   }
+  if (failMode === "weak-source") {
+    return items.map((item, index) =>
+      index < 2
+        ? {
+            ...item,
+            source_name: "Example Aggregator",
+            source_url: `https://example.org/radar/secondary-summary-${index}`,
+            source_type: "news",
+          }
+        : item,
+    );
+  }
   return items;
 }
 
@@ -195,6 +207,8 @@ function buildPrompt({ start, end, issueNumber }) {
     "Focus: AI lab model/product releases, AI infrastructure, NVIDIA/GPU/CUDA/inference/datacenter, China AI dynamics.",
     "International geopolitics should be about 10%: include at most one major event only if it affects chips, energy, supply chain, markets, or AI infrastructure.",
     "Use web search and prioritize official sources, release notes, company announcements, papers, regulatory/government originals, and credible primary reporting.",
+    "For high-importance items, prefer source_url from official domains, primary docs, project releases, papers, government/regulatory originals, or a trusted primary media source such as Reuters/AP when no original source is available.",
+    "Avoid secondary aggregators for highlights. A high-importance highlight with only a weak news/blog/aggregator URL will fail the auto-publish source-score gate.",
     "Mark each item `review_status: candidate`; the auto-publish script will validate sources, normalize highlights, and promote passing items.",
     "Return only Markdown with YAML frontmatter. No code fences.",
     "The frontmatter must match this structure:",
