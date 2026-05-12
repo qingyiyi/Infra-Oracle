@@ -98,11 +98,14 @@ const plannerPayload = JSON.stringify(getPlannerPayload()).replace(/</g, "\\u003
                         type="button"
                         class="planner-task-bar"
                         data-task-id={task.id}
+                        aria-label={`编辑或拖动调整 ${task.title}，${getTaskTimeRangeText(task)}`}
                         title={`${getTaskTimeRangeText(task)} · ${type.label}${task.note ? ` · ${task.note}` : ""}`}
                         style={`--task-left: ${position.left}%; --task-width: ${position.width}%; --task-top: ${laneIndex}; --task-color: ${type.color};`}
                       >
+                        <i class="planner-task-handle planner-task-handle--start" data-planner-drag-handle="start" aria-hidden="true"></i>
                         <span>{task.title}</span>
                         <em>{getTaskCompactTimeRangeText(task)}</em>
+                        <i class="planner-task-handle planner-task-handle--end" data-planner-drag-handle="end" aria-hidden="true"></i>
                       </button>
                     );
                   })}
@@ -268,7 +271,12 @@ const plannerPayload = JSON.stringify(getPlannerPayload()).replace(/</g, "\\u003
         const startMinute = Number(payload.startMinute || 360);
         const endMinute = Number(payload.endMinute || 1440);
         const totalMinutes = endMinute - startMinute;
+        const dragSnapMinutes = 15;
+        const dragThresholdPx = 4;
+        const minDragDurationMinutes = 15;
         let tasks = loadTasks();
+        let activeDrag = null;
+        let suppressedClick = { taskId: "", until: 0 };
 
         function clampDay(value) {
           const number = Number(value);
@@ -292,6 +300,10 @@ const plannerPayload = JSON.stringify(getPlannerPayload()).replace(/</g, "\\u003
           const hoursPart = Math.trunc(minutes / 60);
           const minutesPart = minutes % 60;
           return `${String(hoursPart).padStart(2, "0")}:${String(minutesPart).padStart(2, "0")}`;
+        }
+
+        function snapMinutes(value) {
+          return Math.round(value / dragSnapMinutes) * dragSnapMinutes;
         }
 
         function normalizeTime(value, fallback) {
@@ -442,6 +454,141 @@ const plannerPayload = JSON.stringify(getPlannerPayload()).replace(/</g, "\\u003
           };
         }
 
+        function dayFromPointerY(clientY, fallbackDay) {
+          const rowsByDay = [...rows.querySelectorAll("[data-day-row]")]
+            .map((row) => ({
+              day: clampDay(row.dataset.dayRow),
+              rect: row.getBoundingClientRect(),
+            }))
+            .filter(({ rect }) => rect.height > 0);
+
+          const directHit = rowsByDay.find(({ rect }) => clientY >= rect.top && clientY <= rect.bottom);
+          if (directHit) return directHit.day;
+          if (!rowsByDay.length) return fallbackDay;
+
+          return rowsByDay
+            .map((entry) => ({
+              ...entry,
+              distance: Math.abs(clientY - (entry.rect.top + entry.rect.height / 2)),
+            }))
+            .sort((left, right) => left.distance - right.distance)[0].day;
+        }
+
+        function updateTaskFromDrag(taskId, nextDay, nextStart, nextEnd) {
+          tasks = normalizeTasks(tasks.map((task) =>
+            task.id === taskId
+              ? {
+                  ...task,
+                  day: clampDay(nextDay),
+                  startTime: minutesToTime(nextStart),
+                  endTime: minutesToTime(nextEnd),
+                }
+              : task
+          ));
+          saveTasks();
+          render();
+          syncEditingForm(taskId);
+        }
+
+        function syncEditingForm(taskId) {
+          if (String(form.elements.id.value || "") !== taskId) return;
+          const task = tasks.find((item) => item.id === taskId);
+          if (!task) return;
+          form.elements.day.value = String(task.day);
+          form.elements.startTime.value = task.startTime;
+          form.elements.endTime.value = task.endTime;
+          setMessage(`已调整：${days[task.day]?.label || "这天"} ${timeRangeText(task)} · ${task.title}`, "success");
+        }
+
+        function startTaskDrag(event, taskId) {
+          if (event.pointerType === "mouse" && event.button !== 0) return;
+          const task = tasks.find((item) => item.id === taskId);
+          const track = event.currentTarget.closest(".planner-day-track");
+          if (!task || !track) return;
+
+          const handle = event.target.closest("[data-planner-drag-handle]");
+          const mode = handle?.dataset.plannerDragHandle || "move";
+          const originalStart = timeToMinutes(task.startTime) ?? startMinute;
+          const originalEnd = timeToMinutes(task.endTime) ?? Math.min(endMinute, originalStart + 60);
+
+          activeDrag = {
+            taskId,
+            mode,
+            trackRect: track.getBoundingClientRect(),
+            startClientX: event.clientX,
+            startClientY: event.clientY,
+            originalDay: task.day,
+            originalStart,
+            originalEnd,
+            didMove: false,
+            lastDay: task.day,
+            lastStart: originalStart,
+            lastEnd: originalEnd,
+          };
+
+          document.body.dataset.plannerDragging = "true";
+          event.preventDefault();
+          window.addEventListener("pointermove", handleTaskDragMove);
+          window.addEventListener("pointerup", stopTaskDrag, { once: true });
+          window.addEventListener("pointercancel", cancelTaskDrag, { once: true });
+        }
+
+        function handleTaskDragMove(event) {
+          if (!activeDrag) return;
+          const xDelta = event.clientX - activeDrag.startClientX;
+          const yDelta = event.clientY - activeDrag.startClientY;
+          if (!activeDrag.didMove && Math.abs(xDelta) < dragThresholdPx && Math.abs(yDelta) < dragThresholdPx) return;
+          activeDrag.didMove = true;
+
+          const duration = activeDrag.originalEnd - activeDrag.originalStart;
+          const minuteDelta = snapMinutes((xDelta / Math.max(1, activeDrag.trackRect.width)) * totalMinutes);
+          let nextDay = activeDrag.mode === "move" ? dayFromPointerY(event.clientY, activeDrag.originalDay) : activeDrag.originalDay;
+          let nextStart = activeDrag.originalStart;
+          let nextEnd = activeDrag.originalEnd;
+
+          if (activeDrag.mode === "start") {
+            nextStart = Math.max(startMinute, Math.min(activeDrag.originalEnd - minDragDurationMinutes, activeDrag.originalStart + minuteDelta));
+          } else if (activeDrag.mode === "end") {
+            nextEnd = Math.max(activeDrag.originalStart + minDragDurationMinutes, Math.min(endMinute, activeDrag.originalEnd + minuteDelta));
+          } else {
+            const clampedStart = Math.max(startMinute, Math.min(endMinute - duration, activeDrag.originalStart + minuteDelta));
+            nextStart = clampedStart;
+            nextEnd = clampedStart + duration;
+          }
+
+          if (nextDay === activeDrag.lastDay && nextStart === activeDrag.lastStart && nextEnd === activeDrag.lastEnd) return;
+          activeDrag.lastDay = nextDay;
+          activeDrag.lastStart = nextStart;
+          activeDrag.lastEnd = nextEnd;
+          updateTaskFromDrag(activeDrag.taskId, nextDay, nextStart, nextEnd);
+        }
+
+        function stopTaskDrag() {
+          if (!activeDrag) return;
+          const finishedDrag = activeDrag;
+          window.removeEventListener("pointermove", handleTaskDragMove);
+          window.removeEventListener("pointercancel", cancelTaskDrag);
+          delete document.body.dataset.plannerDragging;
+
+          if (finishedDrag.didMove) {
+            suppressedClick = { taskId: finishedDrag.taskId, until: Date.now() + 450 };
+            const task = tasks.find((item) => item.id === finishedDrag.taskId);
+            if (task) setMessage(`已调整：${days[task.day]?.label || "这天"} ${timeRangeText(task)} · ${task.title}`, "success");
+          }
+
+          activeDrag = null;
+          render();
+        }
+
+        function cancelTaskDrag() {
+          if (!activeDrag) return;
+          window.removeEventListener("pointermove", handleTaskDragMove);
+          window.removeEventListener("pointerup", stopTaskDrag);
+          delete document.body.dataset.plannerDragging;
+          activeDrag = null;
+          render();
+        }
+
         function resetForm() {
           form.reset();
           form.elements.id.value = "";
@@ -522,18 +669,36 @@ const plannerPayload = JSON.stringify(getPlannerPayload()).replace(/</g, "\\u003
               bar.type = "button";
               bar.className = "planner-task-bar";
               bar.dataset.taskId = task.id;
+              bar.setAttribute("aria-label", `编辑或拖动调整 ${task.title}，${timeRangeText(task)}`);
               bar.title = `${timeRangeText(task)} · ${type.label}${task.note ? ` · ${task.note}` : ""}`;
               bar.style.setProperty("--task-left", `${position.left}%`);
               bar.style.setProperty("--task-width", `${position.width}%`);
               bar.style.setProperty("--task-top", String(laneIndex));
               bar.style.setProperty("--task-color", type.color);
-              bar.addEventListener("click", () => editTask(task.id));
+              if (activeDrag?.taskId === task.id) bar.dataset.dragging = "true";
+              bar.addEventListener("pointerdown", (event) => startTaskDrag(event, task.id));
+              bar.addEventListener("click", (event) => {
+                if (suppressedClick.taskId === task.id && Date.now() < suppressedClick.until) {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  return;
+                }
+                editTask(task.id);
+              });
 
+              const startHandle = document.createElement("i");
+              startHandle.className = "planner-task-handle planner-task-handle--start";
+              startHandle.dataset.plannerDragHandle = "start";
+              startHandle.setAttribute("aria-hidden", "true");
               const title = document.createElement("span");
               title.textContent = task.title;
               const meta = document.createElement("em");
               meta.textContent = compactTimeRangeText(task);
-              bar.append(title, meta);
+              const endHandle = document.createElement("i");
+              endHandle.className = "planner-task-handle planner-task-handle--end";
+              endHandle.dataset.plannerDragHandle = "end";
+              endHandle.setAttribute("aria-hidden", "true");
+              bar.append(startHandle, title, meta, endHandle);
               track.append(bar);
             }
 
