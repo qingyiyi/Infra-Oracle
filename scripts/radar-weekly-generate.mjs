@@ -279,12 +279,13 @@ export async function generateWeeklyDraftMarkdown({ start, end, issueNumber, moc
   }
   const settings = getSdkSettings();
   if (!settings.apiKey) {
-    throw new Error("RUNNER_SDK_API_KEY is not configured. Set it in the local Radar SDK environment or pass --mock for local workflow validation.");
+    throw new Error("No SDK API key found. Set RUNNER_SDK_API_KEY in the local Radar SDK environment or configure ~/.codex auth; pass --mock for local workflow validation.");
   }
   const effectiveTimeoutMs = Number.isFinite(timeoutMs) ? timeoutMs : Number.isFinite(settings.timeoutMs) ? settings.timeoutMs : 120000;
   const effectiveRetries = Number.isFinite(retries) ? retries : Number.isFinite(settings.retries) ? settings.retries : 2;
   const effectiveRetryDelayMs = Number.isFinite(retryDelayMs) ? retryDelayMs : Number.isFinite(settings.retryDelayMs) ? settings.retryDelayMs : 5000;
   const input = buildPrompt({ start, end, issueNumber });
+  console.log(`SDK settings: source=${settings.source}, base=${settings.baseUrl}, model=${settings.model}, key=<redacted>`);
   let lastError;
   for (let attempt = 0; attempt <= effectiveRetries; attempt += 1) {
     const controller = new AbortController();

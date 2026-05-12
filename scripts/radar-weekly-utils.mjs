@@ -59,18 +59,91 @@ export function loadDotEnv(filePath) {
   return env;
 }
 
+function loadCodexToml(filePath) {
+  if (!fs.existsSync(filePath)) return null;
+  const root = {};
+  let current = root;
+  const raw = fs.readFileSync(filePath, "utf8");
+  for (const line of raw.split(/\r?\n/)) {
+    const cleaned = line.replace(/#.*$/, "").trim();
+    if (!cleaned) continue;
+    const section = cleaned.match(/^\[([^\]]+)\]$/);
+    if (section) {
+      current = root;
+      for (const part of section[1].split(".")) {
+        current[part] ??= {};
+        current = current[part];
+      }
+      continue;
+    }
+    const separator = cleaned.indexOf("=");
+    if (separator === -1) continue;
+    const key = cleaned.slice(0, separator).trim();
+    const rawValue = cleaned.slice(separator + 1).trim();
+    let value;
+    if (/^".*"$/.test(rawValue)) {
+      value = rawValue.slice(1, -1);
+    } else if (rawValue === "true" || rawValue === "false") {
+      value = rawValue === "true";
+    } else if (/^\d+$/.test(rawValue)) {
+      value = Number(rawValue);
+    } else {
+      value = rawValue;
+    }
+    current[key] = value;
+  }
+  return root;
+}
+
+function normalizeBaseUrl(value) {
+  if (!value) return "";
+  const trimmed = value.replace(/\/$/, "");
+  return trimmed.endsWith("/v1") ? trimmed : `${trimmed}/v1`;
+}
+
+function getCodexSettings() {
+  const codexHome = process.env.CODEX_HOME || path.join(process.env.HOME || "", ".codex");
+  const configPath = path.join(codexHome, "config.toml");
+  const authPath = path.join(codexHome, "auth.json");
+  const config = loadCodexToml(configPath);
+  if (!config) return {};
+  const providerName = config.model_provider;
+  const provider = providerName ? config.model_providers?.[providerName] : null;
+  if (!provider) return {};
+  let apiKey = "";
+  if (fs.existsSync(authPath)) {
+    const auth = JSON.parse(fs.readFileSync(authPath, "utf8"));
+    apiKey = auth[`${providerName}_api_key`] || auth.api_key || "";
+  }
+  return {
+    baseUrl: normalizeBaseUrl(provider.base_url || ""),
+    apiKey,
+    model: config.model || "",
+    timeoutMs: Number(provider.stream_idle_timeout_ms || ""),
+    retries: Number(provider.request_max_retries || ""),
+    retryDelayMs: 5000,
+    source: `codex:${providerName}`,
+    configPath,
+  };
+}
+
 export function getSdkSettings() {
   const envPath = path.join(repoRoot, "runner-backend/.env");
   const fileEnv = loadDotEnv(envPath);
+  const codexSettings = getCodexSettings();
   const read = (name, fallback = "") => process.env[name] ?? fileEnv[name] ?? fallback;
+  const explicitApiKey = read("RUNNER_SDK_API_KEY");
+  const explicitBaseUrl = read("RUNNER_SDK_BASE_URL");
+  const usingCodexFallback = !explicitApiKey && Boolean(codexSettings.apiKey);
   return {
-    baseUrl: read("RUNNER_SDK_BASE_URL", "https://w.ciykj.cn/v1").replace(/\/$/, ""),
-    apiKey: read("RUNNER_SDK_API_KEY"),
-    model: read("RUNNER_SDK_MODEL", read("RUNNER_CODEX_MODEL", "gpt-5.5")),
-    timeoutMs: Number(read("RUNNER_SDK_TIMEOUT_MS", "120000")),
-    retries: Number(read("RUNNER_SDK_RETRIES", "2")),
-    retryDelayMs: Number(read("RUNNER_SDK_RETRY_DELAY_MS", "5000")),
+    baseUrl: normalizeBaseUrl(read("RUNNER_SDK_BASE_URL", usingCodexFallback ? codexSettings.baseUrl : "https://w.ciykj.cn/v1")),
+    apiKey: explicitApiKey || codexSettings.apiKey || "",
+    model: read("RUNNER_SDK_MODEL", read("RUNNER_CODEX_MODEL", usingCodexFallback ? codexSettings.model : "gpt-5.5")),
+    timeoutMs: Number(read("RUNNER_SDK_TIMEOUT_MS", usingCodexFallback ? codexSettings.timeoutMs : "120000")),
+    retries: Number(read("RUNNER_SDK_RETRIES", usingCodexFallback ? codexSettings.retries : "2")),
+    retryDelayMs: Number(read("RUNNER_SDK_RETRY_DELAY_MS", usingCodexFallback ? codexSettings.retryDelayMs : "5000")),
     envPath,
+    source: explicitApiKey || explicitBaseUrl ? "runner-env" : codexSettings.source || "defaults",
   };
 }
 
@@ -331,6 +404,19 @@ function textLength(value) {
   return typeof value === "string" ? value.trim().length : 0;
 }
 
+function stringList(value) {
+  if (Array.isArray(value)) {
+    return value.map((item) => String(item).trim()).filter(Boolean);
+  }
+  if (typeof value === "string") {
+    return value
+      .split(/[；;]\s*|\n+/)
+      .map((item) => item.replace(/^[-*]\s*/, "").trim())
+      .filter(Boolean);
+  }
+  return [];
+}
+
 function completenessScore(item) {
   let score = 0;
   for (const field of ["summary", "why_it_matters", "background", "details", "impact"]) {
@@ -357,10 +443,18 @@ export function normalizeAutoPublishData(data, options = {}) {
   normalized.week_start = normalizeDateField(normalized.week_start);
   normalized.week_end = normalizeDateField(normalized.week_end);
   normalized.published_at = normalizeDateField(normalized.published_at);
+  normalized.topics = stringList(normalized.topics);
   normalized.items = Array.isArray(normalized.items) ? normalized.items : [];
 
   for (const item of normalized.items) {
     item.published_at = normalizeDateField(item.published_at);
+    item.watch_points = stringList(item.watch_points);
+    item.tags = stringList(item.tags);
+    for (const field of ["id", "category", "title", "source_name", "source_url", "source_type", "summary", "why_it_matters", "background", "details", "impact", "credibility", "importance", "review_status", "image_url", "image_alt", "image_source_url", "review_notes"]) {
+      if (item[field] !== undefined && item[field] !== null && typeof item[field] !== "string") {
+        item[field] = String(item[field]);
+      }
+    }
     item.highlight = false;
   }
 
