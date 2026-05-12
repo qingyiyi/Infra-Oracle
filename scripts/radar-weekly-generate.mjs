@@ -172,6 +172,18 @@ function buildMockItems({ start, year, issue, failMode }) {
         : item,
     );
   }
+  if (failMode === "bad-image") {
+    return items.map((item, index) =>
+      index === 0
+        ? {
+            ...item,
+            image_url: "not-a-valid-image-url",
+            image_alt: "",
+            image_source_url: "https://example.org/image-rehost",
+          }
+        : item,
+    );
+  }
   return items;
 }
 
@@ -209,6 +221,7 @@ function buildPrompt({ start, end, issueNumber }) {
     "Use web search and prioritize official sources, release notes, company announcements, papers, regulatory/government originals, and credible primary reporting.",
     "For high-importance items, prefer source_url from official domains, primary docs, project releases, papers, government/regulatory originals, or a trusted primary media source such as Reuters/AP when no original source is available.",
     "Avoid secondary aggregators for highlights. A high-importance highlight with only a weak news/blog/aggregator URL will fail the auto-publish source-score gate.",
+    "Image fields are optional. For highlights, only use official imagery, source-hosted imagery, trusted media imagery, GitHub organization avatars, or clearly public-license images. If image provenance is uncertain, omit image_url/image_alt/image_source_url.",
     "Mark each item `review_status: candidate`; the auto-publish script will validate sources, normalize highlights, and promote passing items.",
     "Return only Markdown with YAML frontmatter. No code fences.",
     "The frontmatter must match this structure:",
@@ -228,7 +241,7 @@ function buildPrompt({ start, end, issueNumber }) {
     "Allowed categories: model, infra, hpc, paper, tooling, china_ai, geopolitics.",
     "Allowed source_type: paper, repo, blog, release_notes, official_docs, product_update, company_announcement, policy, news.",
     "Use Chinese content by default. Keep titles factual. Do not invent URLs. Do not use example.com.",
-    "Image fields are optional. Only include image_url/image_alt/image_source_url when the URL is valid and the source page explains the image context.",
+    "Image fields are optional. Only include image_url/image_alt/image_source_url when the URL is valid and the source page explains the image context and reuse/provenance is safe enough for a public homepage card.",
     "After frontmatter, write a short Chinese editorial intro with 2-4 bullets.",
   ].join("\n");
 }

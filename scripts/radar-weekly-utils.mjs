@@ -28,6 +28,11 @@ export const radarSourceScoreThresholds = {
   lowSourceMaximum: 1,
 };
 
+export const radarImagePolicyThresholds = {
+  publishMinimum: 55,
+  highlightMinimum: 70,
+};
+
 const sourceTypeBaseScores = {
   paper: 82,
   repo: 78,
@@ -62,6 +67,12 @@ const trustedMediaSources = [
   { label: "The Verge", domains: ["theverge.com"] },
   { label: "TechCrunch", domains: ["techcrunch.com"] },
   { label: "MIT Technology Review", domains: ["technologyreview.com"] },
+];
+
+const publicImageSources = [
+  { label: "GitHub avatar", domains: ["avatars.githubusercontent.com"], sourceDomains: ["github.com"] },
+  { label: "Wikimedia Commons", domains: ["upload.wikimedia.org", "commons.wikimedia.org"], sourceDomains: ["commons.wikimedia.org", "wikimedia.org"] },
+  { label: "Unsplash", domains: ["images.unsplash.com", "unsplash.com"], sourceDomains: ["unsplash.com"] },
 ];
 
 export function parseArgs(argv) {
@@ -520,6 +531,78 @@ export function scoreRadarSource(item, sourceResult = { ok: true }) {
   };
 }
 
+export function scoreRadarImage(item) {
+  if (!item?.image_url) {
+    return {
+      score: 100,
+      level: "none",
+      action: "none",
+      imageHostname: "",
+      sourceHostname: "",
+      reasons: ["no-image"],
+    };
+  }
+
+  const imageHostname = hostnameFor(item.image_url);
+  const imageSourceHostname = hostnameFor(item.image_source_url);
+  const sourceHostname = hostnameFor(item.source_url);
+  const officialImageSource = sourceMatchFromList(imageHostname, item.image_url, stableOfficialSources)
+    ?? sourceMatchFromList(imageSourceHostname, item.image_source_url, stableOfficialSources);
+  const trustedMediaImageSource = sourceMatchFromList(imageHostname, item.image_url, trustedMediaSources)
+    ?? sourceMatchFromList(imageSourceHostname, item.image_source_url, trustedMediaSources);
+  const publicImageSource = sourceMatchFromList(imageHostname, item.image_url, publicImageSources);
+  const reasons = [];
+  let score = 36;
+
+  if (!isValidUrl(item.image_url)) {
+    score -= 40;
+    reasons.push("invalid-image-url");
+  }
+  if (!item.image_alt) {
+    score -= 16;
+    reasons.push("missing-image-alt");
+  }
+  if (!item.image_source_url || !isValidUrl(item.image_source_url)) {
+    score -= 36;
+    reasons.push("missing-or-invalid-image-source-url");
+  }
+
+  if (officialImageSource) {
+    score += 42;
+    reasons.push(`official-image-source:${officialImageSource.label}`);
+  } else if (trustedMediaImageSource) {
+    score += 30;
+    reasons.push(`trusted-media-image-source:${trustedMediaImageSource.label}`);
+  } else if (publicImageSource) {
+    const publicSourceHostMatches = (publicImageSource.sourceDomains ?? []).some((domain) => hostMatchesDomain(imageSourceHostname, domain));
+    score += publicSourceHostMatches ? 34 : 22;
+    reasons.push(`public-image-source:${publicImageSource.label}`);
+  } else if (imageHostname && imageSourceHostname && hostMatchesDomain(imageHostname, imageSourceHostname)) {
+    score += 18;
+    reasons.push("image-host-matches-image-source");
+  } else if (imageHostname && sourceHostname && hostMatchesDomain(imageHostname, sourceHostname)) {
+    score += 16;
+    reasons.push("image-host-matches-item-source");
+  } else {
+    score -= 12;
+    reasons.push("unrecognized-image-source");
+  }
+
+  if (item.highlight) score += 4;
+  const clampedScore = Math.max(0, Math.min(100, score));
+  let level = "medium";
+  if (clampedScore >= radarImagePolicyThresholds.highlightMinimum) level = "high";
+  if (clampedScore < radarImagePolicyThresholds.publishMinimum) level = "low";
+  return {
+    score: clampedScore,
+    level,
+    action: clampedScore >= radarImagePolicyThresholds.highlightMinimum ? "keep" : "downgrade",
+    imageHostname,
+    sourceHostname: imageSourceHostname,
+    reasons,
+  };
+}
+
 function textLength(value) {
   return typeof value === "string" ? value.trim().length : 0;
 }
@@ -549,6 +632,7 @@ function completenessScore(item) {
 
 function autoHighlightScore(item, sourceResult) {
   const sourceScore = scoreRadarSource(item, sourceResult);
+  const imageScore = scoreRadarImage(item);
   let score = 0;
   if (item.importance === "high") score += 60;
   if (item.importance === "medium") score += 25;
@@ -556,6 +640,7 @@ function autoHighlightScore(item, sourceResult) {
   if (item.credibility === "medium") score += 18;
   if (sourceResult?.ok !== false) score += 20;
   score += Math.round(sourceScore.score / 4);
+  if (item.image_url) score += imageScore.score >= radarImagePolicyThresholds.highlightMinimum ? 8 : -24;
   score += completenessScore(item);
   return score;
 }
@@ -576,6 +661,12 @@ export function normalizeAutoPublishData(data, options = {}) {
       if (item[field] !== undefined && item[field] !== null && typeof item[field] !== "string") {
         item[field] = String(item[field]);
       }
+    }
+    const imageScore = scoreRadarImage(item);
+    if (item.image_url && imageScore.action === "downgrade" && !imageScore.reasons.some((reason) => reason.startsWith("invalid") || reason.startsWith("missing"))) {
+      delete item.image_url;
+      delete item.image_alt;
+      delete item.image_source_url;
     }
     item.highlight = false;
   }
@@ -689,6 +780,10 @@ export function validateAutoPublishReady(data, options = {}) {
         errors.push(`${label} has image_url but lacks image_source_url.`);
       } else if (!isValidUrl(item.image_source_url)) {
         errors.push(`${label} image_source_url is not a valid URL.`);
+      }
+      const imageScore = scoreRadarImage(item);
+      if (item.highlight && imageScore.score < radarImagePolicyThresholds.highlightMinimum) {
+        errors.push(`${label} image policy score ${imageScore.score} is too low for homepage highlight; use official, public-license, GitHub avatar, source-hosted, or trusted media imagery.`);
       }
     }
   });

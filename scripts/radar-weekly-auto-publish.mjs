@@ -13,6 +13,7 @@ import {
   parseArgs,
   parseMarkdownFrontmatter,
   previousCompleteWeek,
+  scoreRadarImage,
   scoreRadarSource,
   repoRoot,
   slugForIssue,
@@ -49,7 +50,7 @@ Options:
   --week-end YYYY-MM-DD     Override the Sunday end date.
   --issue-number N          Override issue number.
   --mock                    Generate deterministic local mock content.
-  --mock-fail MODE          Mock a failing gate: few-items, low-credibility, low-highlight, bad-url, weak-source.
+  --mock-fail MODE          Mock a failing gate: few-items, low-credibility, low-highlight, bad-url, weak-source, bad-image.
   --dry-run                 Do not write the official issue, commit, or push.
   --no-push                 Commit locally but skip git push.
   --timeout-ms N            Override SDK generation timeout for this run.
@@ -166,6 +167,15 @@ function summarizeSourceResults(items, sourceResults) {
   });
 }
 
+function summarizeImagePolicy(items) {
+  return items.map((item, index) => {
+    const imageScore = scoreRadarImage(item);
+    const label = item.id || `items[${index}]`;
+    const imageState = item.image_url ? `${imageScore.score}/${imageScore.level}/${imageScore.action}` : "none";
+    return `${label}: ${imageState}${item.image_url ? ` ${item.image_source_url}` : ""}`;
+  });
+}
+
 function publishMarkdown(data, body) {
   const publishedData = {
     ...data,
@@ -193,9 +203,12 @@ function printGateResult({ data, sourceResults, target, commitMessage, dryRun, n
   console.log(`Low credibility: ${items.filter((item) => item.credibility === "low").length}`);
   console.log(`Highlights: ${items.filter((item) => item.highlight).map((item) => item.id).join(", ")}`);
   console.log(`Source score: min=${Math.min(...items.map((item, index) => scoreRadarSource(item, sourceResults.get(item.id) ?? sourceResults.get(index)).score))}`);
+  console.log(`Images kept: ${items.filter((item) => item.image_url).length}`);
   console.log(`Target: ${rel(target)}`);
   console.log("\nSource URL check:");
   for (const line of summarizeSourceResults(items, sourceResults)) console.log(`- ${line}`);
+  console.log("\nImage policy:");
+  for (const line of summarizeImagePolicy(items)) console.log(`- ${line}`);
   if (dryRun) {
     console.log("\nDry run: would write the official issue with overwrite enabled.");
     console.log("Dry run: would run npm run check and git diff --check before committing.");
