@@ -111,6 +111,7 @@ const defaultPlannerCaption = defaultPlannerTasks.length === 0
       }
 
       const storageKey = payload.storageKey || "infra-oracle.weekly-planner.v2";
+      const weekStoragePrefix = payload.weekStoragePrefix || "infra-oracle.weekly-planner.v3.week";
       const taskTypes = Array.isArray(payload.taskTypes) ? payload.taskTypes : [];
       const defaultTasks = Array.isArray(payload.defaultTasks) ? payload.defaultTasks : [];
       const days = Array.isArray(payload.days) ? payload.days : [];
@@ -141,6 +142,26 @@ const defaultPlannerCaption = defaultPlannerTasks.length === 0
         const hoursPart = Math.trunc(minutes / 60);
         const minutesPart = minutes % 60;
         return `${String(hoursPart).padStart(2, "0")}:${String(minutesPart).padStart(2, "0")}`;
+      }
+
+      function startOfWeek(date) {
+        const next = new Date(date);
+        next.setHours(0, 0, 0, 0);
+        const day = next.getDay();
+        const diff = day === 0 ? -6 : 1 - day;
+        next.setDate(next.getDate() + diff);
+        return next;
+      }
+
+      function formatDateKey(date) {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, "0");
+        const day = String(date.getDate()).padStart(2, "0");
+        return `${year}-${month}-${day}`;
+      }
+
+      function currentWeekStorageKey() {
+        return `${weekStoragePrefix}.${formatDateKey(startOfWeek(new Date()))}`;
       }
 
       function normalizeTask(task, index = 0) {
@@ -176,7 +197,15 @@ const defaultPlannerCaption = defaultPlannerTasks.length === 0
 
       function loadTasks() {
         try {
-          return normalizeTasks(JSON.parse(window.localStorage.getItem(storageKey) || "null"));
+          const weekValue = window.localStorage.getItem(currentWeekStorageKey());
+          if (weekValue !== null) return normalizeTasks(JSON.parse(weekValue));
+          const legacyValue = window.localStorage.getItem(storageKey);
+          if (legacyValue !== null) {
+            const migrated = normalizeTasks(JSON.parse(legacyValue));
+            window.localStorage.setItem(currentWeekStorageKey(), JSON.stringify(migrated));
+            return migrated;
+          }
+          return normalizeTasks(defaultTasks);
         } catch {
           return normalizeTasks(defaultTasks);
         }
@@ -260,7 +289,7 @@ const defaultPlannerCaption = defaultPlannerTasks.length === 0
 
       render();
       window.addEventListener("storage", (event) => {
-        if (event.key === storageKey) render();
+        if (event.key === storageKey || event.key === currentWeekStorageKey()) render();
       });
     })();
   </script>

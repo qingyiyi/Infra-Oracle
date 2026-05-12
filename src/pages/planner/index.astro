@@ -62,12 +62,18 @@ const plannerPayload = JSON.stringify(getPlannerPayload()).replace(/</g, "\\u003
         <div class="section-header__copy">
           <p class="eyebrow">Week Board</p>
           <h2 class="title-1">这一周怎么过</h2>
-          <p class="body-md">每一行是一整天，横向位置对应当天的具体时间。</p>
+          <p class="body-md" data-planner-week-range>每一行是一整天，横向位置对应当天的具体时间。</p>
         </div>
         <div class="cluster">
           <Badge tone="accent" data-planner-count>{defaultPlannerTasks.length} items</Badge>
-          <Badge>06-24</Badge>
+          <Badge data-planner-week-label>本周</Badge>
         </div>
+      </div>
+
+      <div class="planner-week-switcher" aria-label="切换 Planner 周">
+        <button type="button" class="button button--ghost button--sm" data-planner-week-prev>上一周</button>
+        <button type="button" class="button button--secondary button--sm" data-planner-week-today>回到本周</button>
+        <button type="button" class="button button--ghost button--sm" data-planner-week-next>下一周</button>
       </div>
 
       <div class="planner-time-board" data-planner-board>
@@ -240,6 +246,11 @@ const plannerPayload = JSON.stringify(getPlannerPayload()).replace(/</g, "\\u003
         const rows = document.querySelector("[data-planner-rows]");
         const mobileList = document.querySelector("[data-planner-mobile-list]");
         const count = document.querySelector("[data-planner-count]");
+        const weekLabel = document.querySelector("[data-planner-week-label]");
+        const weekRange = document.querySelector("[data-planner-week-range]");
+        const weekPrevButton = document.querySelector("[data-planner-week-prev]");
+        const weekTodayButton = document.querySelector("[data-planner-week-today]");
+        const weekNextButton = document.querySelector("[data-planner-week-next]");
         const form = document.querySelector("[data-planner-form]");
         const formTitle = document.querySelector("[data-planner-form-title]");
         const message = document.querySelector("[data-planner-message]");
@@ -266,6 +277,7 @@ const plannerPayload = JSON.stringify(getPlannerPayload()).replace(/</g, "\\u003
         const defaultTasks = Array.isArray(payload.defaultTasks) ? payload.defaultTasks : [];
         const typeMap = new Map(types.map((type) => [type.id, type]));
         const storageKey = payload.storageKey || "infra-oracle.weekly-planner.v2";
+        const weekStoragePrefix = payload.weekStoragePrefix || "infra-oracle.weekly-planner.v3.week";
         const exportSchema = payload.exportSchema || "infra-oracle.weekly-planner.export";
         const exportVersion = Number(payload.exportVersion || 1);
         const startMinute = Number(payload.startMinute || 360);
@@ -274,9 +286,12 @@ const plannerPayload = JSON.stringify(getPlannerPayload()).replace(/</g, "\\u003
         const dragSnapMinutes = 15;
         const dragThresholdPx = 4;
         const minDragDurationMinutes = 15;
-        let tasks = loadTasks();
+        let tasks = [];
         let activeDrag = null;
         let suppressedClick = { taskId: "", until: 0 };
+        let selectedWeekStart = startOfWeek(new Date());
+        let selectedWeekKey = formatDateKey(selectedWeekStart);
+        tasks = loadTasks();
 
         function clampDay(value) {
           const number = Number(value);
@@ -300,6 +315,52 @@ const plannerPayload = JSON.stringify(getPlannerPayload()).replace(/</g, "\\u003
           const hoursPart = Math.trunc(minutes / 60);
           const minutesPart = minutes % 60;
           return `${String(hoursPart).padStart(2, "0")}:${String(minutesPart).padStart(2, "0")}`;
+        }
+
+        function startOfWeek(date) {
+          const next = new Date(date);
+          next.setHours(0, 0, 0, 0);
+          const day = next.getDay();
+          const diff = day === 0 ? -6 : 1 - day;
+          next.setDate(next.getDate() + diff);
+          return next;
+        }
+
+        function shiftWeek(date, offset) {
+          const next = new Date(date);
+          next.setDate(next.getDate() + offset * 7);
+          return startOfWeek(next);
+        }
+
+        function formatDateKey(date) {
+          const year = date.getFullYear();
+          const month = String(date.getMonth() + 1).padStart(2, "0");
+          const day = String(date.getDate()).padStart(2, "0");
+          return `${year}-${month}-${day}`;
+        }
+
+        function formatShortDate(date) {
+          return `${date.getMonth() + 1}/${date.getDate()}`;
+        }
+
+        function weekStorageKey(weekKey = selectedWeekKey) {
+          return `${weekStoragePrefix}.${weekKey}`;
+        }
+
+        function currentWeekKey() {
+          return formatDateKey(startOfWeek(new Date()));
+        }
+
+        function getWeekLabel() {
+          const current = currentWeekKey();
+          if (selectedWeekKey === current) return "本周";
+          return selectedWeekKey < current ? "过去周" : "未来周";
+        }
+
+        function getWeekRangeText() {
+          const weekEnd = new Date(selectedWeekStart);
+          weekEnd.setDate(weekEnd.getDate() + 6);
+          return `${formatShortDate(selectedWeekStart)}-${formatShortDate(weekEnd)} · ${selectedWeekKey}`;
         }
 
         function snapMinutes(value) {
@@ -348,24 +409,40 @@ const plannerPayload = JSON.stringify(getPlannerPayload()).replace(/</g, "\\u003
 
         function loadTasks() {
           try {
-            const parsed = JSON.parse(window.localStorage.getItem(storageKey) || "null");
-            return normalizeTasks(parsed);
+            const weekValue = window.localStorage.getItem(weekStorageKey());
+            if (weekValue !== null) return normalizeTasks(JSON.parse(weekValue));
+            if (selectedWeekKey === currentWeekKey()) {
+              const legacyValue = window.localStorage.getItem(storageKey);
+              if (legacyValue !== null) {
+                const migrated = normalizeTasks(JSON.parse(legacyValue));
+                window.localStorage.setItem(weekStorageKey(), JSON.stringify(migrated));
+                return migrated;
+              }
+              return normalizeTasks(defaultTasks);
+            }
+            return [];
           } catch {
-            return normalizeTasks(defaultTasks);
+            return selectedWeekKey === currentWeekKey() ? normalizeTasks(defaultTasks) : [];
           }
         }
 
         function saveTasks() {
-          window.localStorage.setItem(storageKey, JSON.stringify(tasks));
+          window.localStorage.setItem(weekStorageKey(), JSON.stringify(tasks));
         }
 
         function getPlannerExportPayload() {
+          const weekEnd = new Date(selectedWeekStart);
+          weekEnd.setDate(weekEnd.getDate() + 6);
           return {
             schema: exportSchema,
             version: exportVersion,
             exportedAt: new Date().toISOString(),
             app: "Infra-Oracle Weekly Planner",
             storageKey,
+            weekStoragePrefix,
+            weekKey: selectedWeekKey,
+            weekStart: selectedWeekKey,
+            weekEnd: formatDateKey(weekEnd),
             timeWindow: {
               start: minutesToTime(startMinute),
               end: minutesToTime(endMinute),
@@ -375,8 +452,7 @@ const plannerPayload = JSON.stringify(getPlannerPayload()).replace(/</g, "\\u003
         }
 
         function getExportFileName() {
-          const date = new Date().toISOString().slice(0, 10);
-          return `infra-oracle-planner-${date}.json`;
+          return `infra-oracle-planner-${selectedWeekKey}.json`;
         }
 
         function downloadTextFile(fileName, content, mimeType = "application/json") {
@@ -419,6 +495,17 @@ const plannerPayload = JSON.stringify(getPlannerPayload()).replace(/</g, "\\u003
           }
 
           return nextTasks;
+        }
+
+        function switchWeek(nextWeekStart) {
+          selectedWeekStart = startOfWeek(nextWeekStart);
+          selectedWeekKey = formatDateKey(selectedWeekStart);
+          tasks = loadTasks();
+          activeDrag = null;
+          suppressedClick = { taskId: "", until: 0 };
+          resetForm();
+          render();
+          setMessage(`已切换到 ${getWeekRangeText()}。`);
         }
 
         function taskType(task) {
@@ -760,6 +847,8 @@ const plannerPayload = JSON.stringify(getPlannerPayload()).replace(/</g, "\\u003
 
         function render() {
           if (count) count.textContent = `${tasks.length} items`;
+          if (weekLabel) weekLabel.textContent = getWeekLabel();
+          if (weekRange) weekRange.textContent = `${getWeekRangeText()}。每一行是一整天，横向位置对应当天的具体时间。`;
           renderDesktopRows();
           renderMobileList();
         }
@@ -803,7 +892,7 @@ const plannerPayload = JSON.stringify(getPlannerPayload()).replace(/</g, "\\u003
           const normalized = normalizeTask(task);
           if (!normalized) return;
 
-          const successMessage = existingId ? "已更新。" : "已加入本周。";
+          const successMessage = existingId ? "已更新。" : "已加入当前周。";
 
           if (existingId) {
             tasks = tasks.map((item) => item.id === existingId ? normalized : item);
@@ -833,7 +922,7 @@ const plannerPayload = JSON.stringify(getPlannerPayload()).replace(/</g, "\\u003
           saveTasks();
           render();
           resetForm();
-          setMessage("示例已恢复。", "success");
+          setMessage("当前周示例已恢复。", "success");
         });
         exportButton?.addEventListener("click", () => {
           const content = JSON.stringify(getPlannerExportPayload(), null, 2);
@@ -871,8 +960,11 @@ const plannerPayload = JSON.stringify(getPlannerPayload()).replace(/</g, "\\u003
           saveTasks();
           render();
           resetForm();
-          setMessage(`已导入 ${tasks.length} 条安排。`, "success");
+          setMessage(`已导入 ${tasks.length} 条安排到当前周。`, "success");
         });
+        weekPrevButton?.addEventListener("click", () => switchWeek(shiftWeek(selectedWeekStart, -1)));
+        weekTodayButton?.addEventListener("click", () => switchWeek(new Date()));
+        weekNextButton?.addEventListener("click", () => switchWeek(shiftWeek(selectedWeekStart, 1)));
         typeButtons.forEach((button) => {
           button.addEventListener("click", () => {
             form.elements.type.value = button.dataset.plannerType || "custom";

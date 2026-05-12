@@ -864,6 +864,13 @@ body[data-planner-dragging="true"] {
   user-select: none;
 }
 
+.planner-week-switcher {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: var(--space-3) 0 var(--space-4);
+}
+
 .planner-time-board__header,
 .planner-day-row {
   display: grid;
